@@ -1201,3 +1201,309 @@ For issues, questions, or contributions:
 ---
 
 **Built with ❤️ for environmental conservation worldwide** 🌍🌱
+
+
+---
+
+## 🚀 Deployment Guide - Vercel
+
+### **Frontend Deployment (Vercel)**
+
+#### **Option 1: Deploy via Vercel Dashboard (सर्वात सोपा मार्ग)**
+
+1. **Vercel वर Login करा**
+   - Visit: https://vercel.com
+   - "Sign Up" किंवा "Login" वर क्लिक करा
+   - GitHub account वापरून login करा
+
+2. **New Project तयार करा**
+   - Dashboard वर "Add New..." → "Project" वर क्लिक करा
+   - GitHub repositories ची list दिसेल
+   - `darukka.earth` repository शोधा आणि "Import" वर क्लिक करा
+
+3. **Project Configuration**
+   ```
+   Framework Preset: Vite
+   Root Directory: frontend
+   Build Command: npm run build
+   Output Directory: dist
+   Install Command: npm install
+   ```
+
+4. **Environment Variables Add करा**
+   - "Environment Variables" section मध्ये जा
+   - खालील variables add करा:
+   
+   | Name | Value |
+   |------|-------|
+   | `VITE_MAPBOX_TOKEN` | तुमचा Mapbox token |
+   | `VITE_API_URL` | तुमचा backend URL (deployed) |
+
+5. **Deploy वर क्लिक करा**
+   - 2-3 मिनिटे वाट पहा
+   - Build complete झाल्यावर तुम्हाला URL मिळेल (उदा: `https://darukaa-earth.vercel.app`)
+
+#### **Option 2: Deploy via Vercel CLI**
+
+```bash
+# Vercel CLI Install करा
+npm install -g vercel
+
+# Frontend folder मध्ये जा
+cd frontend
+
+# Deploy command run करा
+vercel
+
+# Production deploy साठी
+vercel --prod
+```
+
+#### **Step-by-step CLI Prompts:**
+```
+? Set up and deploy "~/darukaa.earth/frontend"? [Y/n] Y
+? Which scope do you want to deploy to? Your Name
+? Link to existing project? [y/N] n
+? What's your project's name? darukaa-earth
+? In which directory is your code located? ./
+? Want to modify these settings? [y/N] n
+```
+
+---
+
+### **Backend Deployment Options**
+
+Backend साठी Vercel free tier फारसा योग्य नाही (Serverless Functions limitations). तुमच्याकडे options आहेत:
+
+#### **Option 1: Render (Free Tier Available) - Recommended**
+
+1. **Render.com वर Account तयार करा**
+   - Visit: https://render.com
+   - GitHub वापरून sign up करा
+
+2. **New Web Service तयार करा**
+   - Dashboard → "New" → "Web Service"
+   - GitHub repo connect करा
+
+3. **Configuration:**
+   ```
+   Name: darukaa-earth-backend
+   Region: Singapore (nearest to India)
+   Branch: main
+   Root Directory: backend
+   Runtime: Python 3
+   Build Command: pip install -r requirements.txt
+   Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
+   ```
+
+4. **Environment Variables:**
+   - `DATABASE_URL` - तुमचा Supabase connection string
+   - `JWT_SECRET_KEY` - तुमची secret key
+   - `PORT` - 8000
+
+5. **Deploy वर क्लिक करा**
+
+#### **Option 2: Railway (Free $5 Credit)**
+
+1. **Railway.app वर जा**
+   - Visit: https://railway.app
+   - GitHub वापरून sign up करा
+
+2. **New Project → Deploy from GitHub repo**
+   - `darukka.earth` select करा
+
+3. **Configuration:**
+   ```
+   Root Directory: backend
+   Start Command: uvicorn main:app --host 0.0.0.0 --port $PORT
+   ```
+
+4. **Environment Variables add करा**
+
+#### **Option 3: Python Anywhere (Free Tier)**
+
+1. **Account Create** - https://www.pythonanywhere.com
+2. **Web App Setup** - Manual configuration करावा लागेल
+3. **WSGI Configuration** - FastAPI ASGI साठी setup
+
+---
+
+### **Environment Variables सुरक्षित कसे ठेवायचे**
+
+#### **GitHub Secrets (CI/CD साठी)**
+1. GitHub repo → Settings → Secrets and variables → Actions
+2. "New repository secret" वर क्लिक करा
+3. Add:
+   - `DATABASE_URL`
+   - `JWT_SECRET_KEY`
+   - `VITE_MAPBOX_TOKEN`
+
+#### **Production Environment Variables**
+
+**Frontend (.env.production):**
+```env
+VITE_MAPBOX_TOKEN=pk.your-mapbox-token
+VITE_API_URL=https://your-backend-url.render.com
+```
+
+**Backend (.env on Render/Railway):**
+```env
+DATABASE_URL=postgresql://user:pass@host:port/db
+JWT_SECRET_KEY=your-super-secret-key-min-32-chars
+CORS_ORIGINS=https://darukaa-earth.vercel.app
+```
+
+---
+
+### **Post-Deployment Checklist**
+
+✅ **1. Frontend Deployed Successfully**
+- Vercel dashboard मध्ये green status दिसतो
+- Live URL वर website उघडतो
+- Console मध्ये errors नाहीत
+
+✅ **2. Backend Deployed Successfully**
+- Render/Railway logs मध्ये "Application startup complete" दिसतं
+- `/docs` endpoint कार्य करतो
+- Health check API response देतो
+
+✅ **3. Database Connection**
+- Backend logs मध्ये database connection errors नाहीत
+- Supabase dashboard मध्ये connections दिसतात
+
+✅ **4. CORS Configuration**
+- Backend मध्ये frontend URL allowed आहे
+- API calls console मध्ये CORS errors नाहीत
+
+✅ **5. Environment Variables**
+- सर्व secrets properly configured आहेत
+- `.env` files git मध्ये commit केलेल्या नाहीत
+
+✅ **6. API Integration**
+- Frontend → Backend API calls work करतात
+- Login/Register functionality चालू आहे
+- Map loads properly
+
+---
+
+### **Common Issues & Solutions**
+
+#### **❌ Issue: Build Failed on Vercel**
+**Solution:**
+```bash
+# Local build test करा
+cd frontend
+npm run build
+
+# Error logs वाचा आणि fix करा
+```
+
+#### **❌ Issue: CORS Error**
+**Solution:** Backend `main.py` मध्ये:
+```python
+origins = [
+    "https://darukaa-earth.vercel.app",  # तुमचा Vercel URL
+    "http://localhost:5173",  # Development
+]
+```
+
+#### **❌ Issue: Environment Variables Not Loading**
+**Solution:**
+- Vercel dashboard मधून variables double-check करा
+- Rebuild trigger करा: Deployments → ... → Redeploy
+
+#### **❌ Issue: API 502/504 Timeout**
+**Solution:**
+- Backend logs check करा
+- Database connection verify करा
+- Cold start delay असू शकतो (first request slow)
+
+---
+
+### **Custom Domain Setup (Optional)**
+
+#### **Vercel मध्ये Custom Domain Add करायचं:**
+
+1. Vercel Project → Settings → Domains
+2. Domain name enter करा (उदा: `darukaa.earth`)
+3. DNS records update करा:
+   ```
+   Type: CNAME
+   Name: www
+   Value: cname.vercel-dns.com
+   ```
+4. SSL automatic setup होईल (Let's Encrypt)
+
+---
+
+### **Performance Optimization Tips**
+
+1. **Frontend Optimization:**
+   - Image optimization (WebP format वापरा)
+   - Lazy loading for components
+   - Bundle size minimize करा
+
+2. **Backend Optimization:**
+   - Database connection pooling enable करा
+   - API response caching add करा
+   - Keep-alive connections वापरा
+
+3. **Monitoring Setup:**
+   - Vercel Analytics enable करा
+   - Sentry error tracking add करा
+   - Database performance monitor करा
+
+---
+
+### **Quick Deployment Commands**
+
+```bash
+# Frontend deploy (production)
+cd frontend
+vercel --prod
+
+# Check deployment status
+vercel ls
+
+# View logs
+vercel logs
+
+# Frontend environment variables set करा
+vercel env add VITE_MAPBOX_TOKEN production
+
+# Backend locally test करा deployment साठी
+cd backend
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+---
+
+### **Deployment URLs Structure**
+
+```
+Frontend (Vercel):
+Production: https://darukaa-earth.vercel.app
+Preview: https://darukaa-earth-git-feature-yourname.vercel.app
+
+Backend (Render):
+Production: https://darukaa-earth-backend.onrender.com
+API Docs: https://darukaa-earth-backend.onrender.com/docs
+
+Database (Supabase):
+Dashboard: https://app.supabase.com/project/your-project-id
+Connection: postgres://...pooler.supabase.com:6543/postgres
+```
+
+---
+
+### **Need Help?**
+
+तुम्हाला deploy करतांना काही अडचण आली तर:
+
+1. **Vercel Documentation:** https://vercel.com/docs
+2. **Render Documentation:** https://render.com/docs
+3. **GitHub Issues:** Create issue on repo
+4. **Discord/Slack:** Community support
+
+**Good Luck with Deployment! 🚀**
+
