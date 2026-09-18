@@ -7,6 +7,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 import os
 from dotenv import load_dotenv
+import logging
 
 from database import get_db
 from models import User
@@ -14,13 +15,21 @@ from models import User
 # Load environment variables
 load_dotenv()
 
+# Configure logging
+logger = logging.getLogger(__name__)
+
 # JWT Configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
-# Password hashing context
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Password hashing context with explicit bcrypt settings
+# Using bcrypt__ident='2b' to avoid version detection issues
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__ident="2b"
+)
 
 # OAuth2 scheme for token authentication
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
@@ -30,14 +39,39 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a plain password against a hashed password
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        logger.info(f"Verifying password (length: {len(plain_password)})")
+        result = pwd_context.verify(plain_password, hashed_password)
+        logger.info(f"Password verification result: {result}")
+        return result
+    except Exception as e:
+        logger.error(f"Password verification error: {e}")
+        # Try direct bcrypt as fallback
+        import bcrypt
+        try:
+            return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8') if isinstance(hashed_password, str) else hashed_password)
+        except Exception as e2:
+            logger.error(f"Fallback bcrypt verification failed: {e2}")
+            return False
 
 
 def get_password_hash(password: str) -> str:
     """
     Hash a password for storing in database
     """
-    return pwd_context.hash(password)
+    try:
+        logger.info(f"Hashing password (length: {len(password)})")
+        hashed = pwd_context.hash(password)
+        logger.info("Password hashed successfully")
+        return hashed
+    except Exception as e:
+        logger.error(f"Password hashing error: {e}")
+        # Fallback to direct bcrypt
+        import bcrypt
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+        logger.info("Password hashed with fallback bcrypt")
+        return hashed.decode('utf-8')
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
