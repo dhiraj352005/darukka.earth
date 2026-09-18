@@ -30,12 +30,12 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS - Allow Vercel frontend and local development
+# Configure CORS - Allow Vercel frontend
 origins = [
     "http://localhost:5173",
     "http://localhost:3000",
     "https://darukka-earth-bj6a.vercel.app",  # Your Vercel frontend
-    "https://*.vercel.app",  # All Vercel preview deployments
+    "https://darukka-earth.vercel.app",  # Production domain (if exists)
 ]
 
 app.add_middleware(
