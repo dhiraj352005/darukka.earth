@@ -30,13 +30,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS - Allow all origins (for testing)
+# Configure CORS - Allow all origins for public access
+# IMPORTANT: CORS middleware must be added BEFORE including routers
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins temporarily
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # Allow all origins - open access
+    allow_credentials=False,  # Must be False when allow_origins=["*"]
+    allow_methods=["*"],  # Allow all HTTP methods
+    allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"],  # Expose all headers to client
 )
 
 # Include routers (no /api prefix - handled by vercel routing)
