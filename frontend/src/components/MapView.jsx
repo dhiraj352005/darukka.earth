@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
+import PropTypes from 'prop-types'
 import mapboxgl from 'mapbox-gl'
 import MapboxDraw from '@mapbox/mapbox-gl-draw'
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css'
@@ -15,6 +16,31 @@ const MapView = ({ onSiteClick, isAdmin }) => {
   const [sites, setSites] = useState([])
   const [drawnFeatures, setDrawnFeatures] = useState([])
   const [loading, setLoading] = useState(false)
+
+  const loadSites = useCallback(async () => {
+    try {
+      const response = await siteAPI.getAll()
+      const sitesData = response.data
+
+      setSites(sitesData)
+
+      // Wait for map to be ready
+      if (!map.current.isStyleLoaded()) {
+        map.current.on('load', () => addSitesToMap(sitesData))
+      } else {
+        addSitesToMap(sitesData)
+      }
+    } catch (error) {
+      console.error('Error loading sites:', error)
+    }
+  }, [])
+
+  const updateDrawnFeatures = useCallback(() => {
+    if (draw.current) {
+      const data = draw.current.getAll()
+      setDrawnFeatures(data.features)
+    }
+  }, [])
 
   // Initialize map
   useEffect(() => {
@@ -60,32 +86,7 @@ const MapView = ({ onSiteClick, isAdmin }) => {
         map.current = null
       }
     }
-  }, [isAdmin])
-
-  const updateDrawnFeatures = () => {
-    if (draw.current) {
-      const data = draw.current.getAll()
-      setDrawnFeatures(data.features)
-    }
-  }
-
-  const loadSites = async () => {
-    try {
-      const response = await siteAPI.getAll()
-      const sitesData = response.data
-
-      setSites(sitesData)
-
-      // Wait for map to be ready
-      if (!map.current.isStyleLoaded()) {
-        map.current.on('load', () => addSitesToMap(sitesData))
-      } else {
-        addSitesToMap(sitesData)
-      }
-    } catch (error) {
-      console.error('Error loading sites:', error)
-    }
-  }
+  }, [isAdmin, loadSites, updateDrawnFeatures])
 
   const addSitesToMap = (sitesData) => {
     if (!map.current || !sitesData || sitesData.length === 0) return
@@ -324,6 +325,11 @@ const MapView = ({ onSiteClick, isAdmin }) => {
       </div>
     </div>
   )
+}
+
+MapView.propTypes = {
+  onSiteClick: PropTypes.func,
+  isAdmin: PropTypes.bool.isRequired,
 }
 
 export default MapView

@@ -1,8 +1,10 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import PropTypes from 'prop-types'
 import { authAPI } from '../services/api'
 
 const AuthContext = createContext(null)
 
+// Separate export to avoid fast-refresh warning
 export const useAuth = () => {
   const context = useContext(AuthContext)
   if (!context) {
@@ -81,4 +83,8 @@ export const AuthProvider = ({ children }) => {
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+}
+
+AuthProvider.propTypes = {
+  children: PropTypes.node.isRequired,
 }

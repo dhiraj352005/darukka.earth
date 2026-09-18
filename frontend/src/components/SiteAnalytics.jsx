@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import PropTypes from 'prop-types'
 import Highcharts from 'highcharts'
 import HighchartsReact from 'highcharts-react-official'
 import './SiteAnalytics.css'
@@ -329,6 +330,16 @@ const SiteAnalytics = ({ site, onClose }) => {
       </div>
     </div>
   )
+}
+
+SiteAnalytics.propTypes = {
+  site: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    project_id: PropTypes.number.isRequired,
+    area_hectares: PropTypes.number,
+  }).isRequired,
+  onClose: PropTypes.func.isRequired,
 }
 
 export default SiteAnalytics
