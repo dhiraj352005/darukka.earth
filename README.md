@@ -1,6 +1,270 @@
-# Darukaa.Earth
+# 🌍 Darukaa.Earth
 
-Full-stack web application with FastAPI backend and React frontend.
+**A Full-Stack Restoration & Conservation Platform**
+
+Darukaa.Earth is a comprehensive geospatial management platform for environmental restoration and conservation projects. It combines interactive mapping, spatial data management, and performance analytics to help organizations track and visualize their environmental impact.
+
+[![CI/CD Pipeline](https://github.com/yourusername/darukaa.earth/workflows/Darukaa.Earth%20CI/CD%20Pipeline/badge.svg)](https://github.com/yourusername/darukaa.earth/actions)
+
+---
+
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Architecture](#-high-level-architecture)
+- [Database Schema](#-database-schema)
+- [Tech Stack](#-tech-stack)
+- [Prerequisites](#-prerequisites)
+- [Local Setup](#-local-setup-instructions)
+- [CI/CD Pipeline](#-cicd-pipeline)
+- [API Documentation](#-api-documentation)
+- [Usage Guide](#-usage-guide)
+- [Project Structure](#-project-structure)
+- [Contributing](#-contributing)
+- [License](#-license)
+
+---
+
+## ✨ Features
+
+### Core Functionality
+- 🔐 **JWT Authentication** - Secure user registration and login
+- 🗺️ **Interactive Mapping** - Full-screen Mapbox GL JS satellite view
+- 📐 **Polygon Drawing** - Draw site boundaries directly on the map
+- 💾 **Spatial Data Management** - PostgreSQL + PostGIS for geospatial data
+- 📊 **Performance Analytics** - Highcharts-powered data visualization
+- 👨‍💼 **Role-Based Access** - Admin controls for site management
+- 🌐 **RESTful API** - Clean, documented endpoints
+
+### Technical Features
+- PostGIS geometry columns for storing map polygons
+- GeoJSON format for frontend-backend communication
+- Automatic PostGIS extension initialization
+- Real-time site visualization on interactive maps
+- Responsive design for desktop and mobile
+- Pre-commit hooks for code quality
+
+---
+
+## 🏗️ High-Level Architecture
+
+### System Overview
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         Client Layer                         │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │   React Frontend (Port 5173)                           │ │
+│  │   • Login/Register UI                                  │ │
+│  │   • Dashboard with Mapbox GL JS                        │ │
+│  │   • Polygon Drawing Tools (Mapbox Draw)                │ │
+│  │   • Highcharts Analytics Modal                         │ │
+│  │   • Protected Routes (React Router)                    │ │
+│  └────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                            ↓ HTTP/HTTPS
+                            ↓ JWT Tokens
+                            ↓ JSON/GeoJSON
+┌─────────────────────────────────────────────────────────────┐
+│                      Application Layer                       │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │   FastAPI Backend (Port 8000)                          │ │
+│  │   • Authentication Endpoints (JWT)                     │ │
+│  │   • Project Management API                             │ │
+│  │   • Site Management API (GeoJSON)                      │ │
+│  │   • CORS Middleware                                    │ │
+│  │   • Pydantic Validation                                │ │
+│  └────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                            ↓ SQLAlchemy ORM
+                            ↓ PostGIS Queries
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                        Data Layer                            │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │   PostgreSQL + PostGIS (Supabase)                      │ │
+│  │   • Users Table (authentication)                       │ │
+│  │   • Projects Table (project management)                │ │
+│  │   • Sites Table (spatial data with GEOMETRY column)    │ │
+│  │   • PostGIS Extension (spatial functions)              │ │
+│  └────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Architecture Principles
+
+**1. Three-Tier Architecture**
+- **Presentation Tier:** React frontend with Mapbox and Highcharts
+- **Application Tier:** FastAPI REST API with business logic
+- **Data Tier:** PostgreSQL database with PostGIS extension
+
+**2. API-First Design**
+- RESTful endpoints with clear resource naming
+- JSON and GeoJSON for data interchange
+- OpenAPI documentation auto-generated
+
+**3. Security Layers**
+- JWT tokens for stateless authentication
+- Bcrypt password hashing with salt
+- Role-based access control (RBAC)
+- CORS configuration for frontend-backend communication
+
+**4. Spatial Data Flow**
+
+```
+User draws polygon on map (Mapbox Draw)
+    ↓
+GeoJSON format {"type": "Polygon", "coordinates": [...]}
+    ↓
+Frontend sends POST /sites with GeoJSON
+    ↓
+Backend converts GeoJSON → Shapely Geometry
+    ↓
+Shapely Geometry → PostGIS GEOMETRY(POLYGON, 4326)
+    ↓
+Stored in PostgreSQL with spatial index
+    ↓
+Retrieved and converted back to GeoJSON for display
+    ↓
+Rendered as colored polygons on Mapbox map
+```
+
+---
+
+## 🗄️ Database Schema
+
+### Entity Relationship Diagram
+
+```
+┌─────────────────────────┐
+│         Users           │
+├─────────────────────────┤
+│ id (PK)                 │
+│ email (UNIQUE)          │
+│ username (UNIQUE)       │
+│ hashed_password         │
+│ full_name               │
+│ is_active               │
+│ is_admin                │◄─────────┐
+│ created_at              │          │
+│ updated_at              │          │
+└─────────────────────────┘          │
+                                     │
+                                     │ owns (1:N)
+                                     │
+┌─────────────────────────┐          │
+│       Projects          │          │
+├─────────────────────────┤          │
+│ id (PK)                 │          │
+│ name                    │          │
+│ description             │          │
+│ owner_id (FK)           │──────────┘
+│ status                  │
+│ created_at              │
+│ updated_at              │◄─────────┐
+└─────────────────────────┘          │
+                                     │
+                                     │ contains (1:N)
+                                     │
+┌─────────────────────────┐          │
+│         Sites           │          │
+├─────────────────────────┤          │
+│ id (PK)                 │          │
+│ name                    │          │
+│ description             │          │
+│ project_id (FK)         │──────────┘
+│ geometry (GEOMETRY)     │ ◄── PostGIS POLYGON
+│ area_hectares           │
+│ location_info           │
+│ created_at              │
+│ updated_at              │
+└─────────────────────────┘
+```
+
+### Table Definitions
+
+#### Users Table
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    is_admin BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_users_email ON users(email);
+CREATE INDEX idx_users_username ON users(username);
+```
+
+**Purpose:** Store user authentication and authorization data  
+**Security:** Passwords hashed with bcrypt (never stored in plain text)  
+**Relationships:** One user can own multiple projects
+
+#### Projects Table
+```sql
+CREATE TABLE projects (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    owner_id INTEGER NOT NULL REFERENCES users(id),
+    status VARCHAR(50) DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_projects_owner ON projects(owner_id);
+CREATE INDEX idx_projects_status ON projects(status);
+```
+
+**Purpose:** Organize sites into restoration/conservation projects  
+**Status Values:** 'active', 'completed', 'archived'  
+**Relationships:** Belongs to one user, contains multiple sites
+
+#### Sites Table (with PostGIS)
+```sql
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+CREATE TABLE sites (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    geometry GEOMETRY(POLYGON, 4326) NOT NULL,  -- PostGIS column
+    area_hectares INTEGER,
+    location_info TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX idx_sites_project ON sites(project_id);
+CREATE INDEX idx_sites_geometry ON sites USING GIST(geometry);  -- Spatial index
+```
+
+**Purpose:** Store geographical site boundaries as polygons  
+**Geometry Column:**
+- Type: POLYGON (closed polygons only)
+- SRID: 4326 (WGS84 - standard GPS coordinates)
+- Indexed with GIST for fast spatial queries
+
+**Spatial Features:**
+- ST_Area() - Calculate polygon area
+- ST_Contains() - Check if point is inside polygon
+- ST_Intersects() - Find overlapping polygons
+- ST_Distance() - Measure distances between sites
+
+### Cascade Delete Behavior
+
+```
+Delete Project → Automatically deletes all associated Sites
+Delete User → Project ownership must be reassigned first
+```
+
+---
 
 ## Project Structure
 
@@ -26,17 +290,28 @@ darukaa.earth/
 
 ## Backend Setup
 
-The backend uses Python with FastAPI framework.
+The backend uses Python with FastAPI framework and PostgreSQL + PostGIS for spatial data.
 
 ### Prerequisites
 - Python 3.x
+- PostgreSQL with PostGIS extension (using Supabase)
 
 ### Installed Dependencies
-- FastAPI 0.141.1
-- Uvicorn 0.53.0
-- SQLAlchemy 2.0.54
-- psycopg2-binary 2.9.13
-- PyJWT 2.14.0
+- FastAPI 0.141.1 - Web framework
+- Uvicorn 0.53.0 - ASGI server
+- SQLAlchemy 2.0.54 - ORM
+- psycopg2-binary 2.9.13 - PostgreSQL adapter
+- GeoAlchemy2 0.20.0 - PostGIS integration
+- Shapely 2.1.2 - Geometry manipulation
+- JWT & Auth libraries
+
+### Features
+✅ JWT Authentication with user registration and login  
+✅ PostgreSQL + PostGIS for spatial data  
+✅ SQLAlchemy models: User, Project, Site  
+✅ PostGIS Geometry column for storing map polygons  
+✅ Admin-protected endpoints for projects and sites  
+✅ GeoJSON support for geographical data  
 
 ### Running the Backend
 ```bash
@@ -56,6 +331,28 @@ uvicorn main:app --reload
 The backend API will be available at `http://localhost:8000`
 - API Docs: `http://localhost:8000/docs`
 - Health Check: `http://localhost:8000/health`
+
+### API Endpoints
+
+**Authentication** (`/auth`):
+- `POST /auth/register` - Register new user
+- `POST /auth/login` - Login and get JWT token
+- `GET /auth/me` - Get current user info
+
+**Projects** (`/projects`) - Admin only:
+- `POST /projects` - Create project
+- `GET /projects` - List all projects with sites
+- `GET /projects/{id}` - Get specific project
+- `DELETE /projects/{id}` - Delete project
+
+**Sites** (`/sites`) - Admin only:
+- `POST /sites` - Add geographical site (polygon)
+- `POST /sites/bulk` - Add multiple sites
+- `GET /sites` - List all sites
+- `GET /sites/{id}` - Get specific site
+- `DELETE /sites/{id}` - Delete site
+
+📖 **See `backend/README.md` for detailed API documentation.**
 
 ## Frontend Setup
 
@@ -161,3 +458,746 @@ This repository is initialized with Git. Remember to:
 3. Create database models in the backend
 4. Build out your API endpoints
 5. Connect the frontend to the backend API
+
+## 🛠️ Tech Stack
+
+### Backend
+- **FastAPI** 0.141.1 - Modern Python web framework
+- **PostgreSQL** - Primary database (hosted on Supabase)
+- **PostGIS** - Spatial database extension for geometry operations
+- **SQLAlchemy** 2.0.54 - SQL toolkit and ORM
+- **GeoAlchemy2** 0.20.0 - PostGIS integration for SQLAlchemy
+- **Shapely** 2.1.2 - Geometry manipulation and validation
+- **python-jose** 3.5.0 - JWT token encoding/decoding
+- **passlib** 1.7.4 - Password hashing with bcrypt
+- **Uvicorn** 0.53.0 - ASGI server
+
+### Frontend
+- **React** 18.3.1 - UI library
+- **Vite** 6.0.7 - Build tool and dev server
+- **Mapbox GL JS** - Interactive mapping library
+- **Mapbox Draw** - Polygon drawing plugin
+- **Highcharts** - Data visualization library
+- **Axios** - HTTP client for API calls
+- **React Router** - Client-side routing
+- **ESLint** + **Prettier** - Code quality tools
+
+### DevOps
+- **GitHub Actions** - CI/CD pipeline
+- **Husky** - Git hooks for code quality
+- **lint-staged** - Run linters on staged files
+
+---
+
+## 📋 Prerequisites
+
+Before setting up the project, ensure you have:
+
+- **Node.js** 18+ and npm
+- **Python** 3.11+ and pip
+- **Git** for version control
+- **PostgreSQL** database with PostGIS (we use Supabase)
+- **Mapbox account** for map token (free tier available)
+- **Code editor** (VS Code recommended)
+
+### Account Setup
+
+1. **Supabase Account** (for PostgreSQL + PostGIS):
+   - Sign up at https://supabase.com
+   - Create a new project
+   - Enable PostGIS extension in SQL editor:
+     ```sql
+     CREATE EXTENSION IF NOT EXISTS postgis;
+     ```
+   - Copy connection string from Project Settings → Database
+
+2. **Mapbox Account** (for maps):
+   - Sign up at https://www.mapbox.com
+   - Go to Account → Tokens
+   - Create a new token or use default public token
+   - Copy the access token
+
+---
+
+## 🚀 Local Setup Instructions
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/yourusername/darukaa.earth.git
+cd darukaa.earth
+```
+
+### Step 2: Backend Setup
+
+#### 2.1 Create Python Virtual Environment
+
+```bash
+cd backend
+
+# Windows
+python -m venv venv
+venv\Scripts\activate
+
+# macOS/Linux
+python3 -m venv venv
+source venv/bin/activate
+```
+
+#### 2.2 Install Dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+#### 2.3 Configure Environment Variables
+
+Create `backend/.env` file:
+
+```env
+DATABASE_URL=postgresql://user:password@host:port/database
+JWT_SECRET_KEY=your-secret-key-here
+```
+
+**Important:** 
+- Replace with your actual Supabase connection string
+- Use a strong, random JWT secret key
+- Never commit `.env` to version control
+
+#### 2.4 Verify Backend Setup
+
+```bash
+python test_startup.py
+```
+
+Expected output:
+```
+Testing imports...
+✓ All imports successful
+
+Testing database connection...
+✓ Database connected: PostgreSQL 15.x...
+
+Initializing PostGIS...
+✓ PostGIS extension initialized successfully
+
+Creating database tables...
+✓ Database tables created successfully
+
+✅ ALL TESTS PASSED!
+```
+
+### Step 3: Frontend Setup
+
+#### 3.1 Install Node Dependencies
+
+```bash
+cd ../frontend
+npm install
+```
+
+#### 3.2 Configure Environment Variables
+
+Create `frontend/.env` file:
+
+```env
+VITE_MAPBOX_TOKEN=your-mapbox-token-here
+VITE_API_URL=http://localhost:8000
+```
+
+**Important:**
+- Replace with your actual Mapbox access token
+- Keep VITE_API_URL pointing to local backend
+
+#### 3.3 Verify Frontend Setup
+
+```bash
+npm run lint
+npm run build
+```
+
+### Step 4: Run the Application
+
+#### 4.1 Start Backend Server
+
+Terminal 1:
+```bash
+cd backend
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # macOS/Linux
+python main.py
+```
+
+Backend runs on **http://localhost:8000**
+
+Verify:
+- API Docs: http://localhost:8000/docs
+- Health Check: http://localhost:8000/health
+
+#### 4.2 Start Frontend Dev Server
+
+Terminal 2:
+```bash
+cd frontend
+npm run dev
+```
+
+Frontend runs on **http://localhost:5173**
+
+### Step 5: Create First Admin User
+
+#### Option 1: Using API Docs (Recommended)
+
+1. Open http://localhost:8000/docs
+2. Navigate to POST /auth/register
+3. Click "Try it out"
+4. Enter:
+   ```json
+   {
+     "email": "admin@example.com",
+     "username": "admin",
+     "password": "SecurePass123!",
+     "full_name": "Admin User",
+     "is_admin": true
+   }
+   ```
+5. Click "Execute"
+
+#### Option 2: Using Frontend
+
+1. Open http://localhost:5173
+2. Click "Register" tab
+3. Fill in the form
+4. **Check "Register as Administrator"**
+5. Click "Register"
+
+### Step 6: Login and Explore
+
+1. Navigate to http://localhost:5173
+2. Login with your credentials
+3. You'll be redirected to the dashboard
+4. Explore features:
+   - View the interactive map
+   - Draw polygons (admin only)
+   - Click on sites to view analytics
+
+---
+
+## 🔄 CI/CD Pipeline
+
+### Pipeline Overview
+
+The GitHub Actions CI/CD pipeline automatically runs on every push to the `main` branch and on all pull requests. It ensures code quality and prevents broken code from being merged.
+
+### Pipeline Structure
+
+```yaml
+Pipeline: Darukaa.Earth CI/CD
+├── Job 1: Frontend Checks (parallel)
+│   ├── Checkout code
+│   ├── Setup Node.js 18
+│   ├── Install dependencies (npm ci)
+│   ├── Run ESLint (npm run lint)
+│   ├── Build frontend (npm run build)
+│   └── Upload build artifacts
+│
+├── Job 2: Backend Tests (parallel)
+│   ├── Checkout code
+│   ├── Setup Python 3.11
+│   ├── Install dependencies (pip install)
+│   ├── Run import tests
+│   └── Run syntax checks (py_compile)
+│
+└── Job 3: All Checks (depends on 1 & 2)
+    └── Verify all jobs passed
+```
+
+### Pipeline Configuration
+
+**Location:** `.github/workflows/main.yml`
+
+**Triggers:**
+```yaml
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+```
+
+**Jobs Explained:**
+
+#### 1. Frontend Checks Job
+
+**Purpose:** Validate frontend code quality and build
+
+**Steps:**
+1. **Checkout code** - Gets latest code from repository
+2. **Setup Node.js** - Installs Node.js 18 with npm caching
+3. **Install dependencies** - Runs `npm ci` (clean install)
+4. **Run ESLint** - Checks code style and catches errors
+   - Fails if linting errors found
+   - Validates React, JavaScript, JSX code
+5. **Build frontend** - Runs `npm run build`
+   - Ensures production build works
+   - Catches build-time errors
+6. **Upload artifacts** - Saves build output
+   - Retained for 7 days
+   - Can be downloaded for deployment
+
+**Why it matters:**
+- Catches syntax errors before merge
+- Enforces code style consistency
+- Verifies production build succeeds
+
+#### 2. Backend Tests Job
+
+**Purpose:** Validate backend code integrity
+
+**Steps:**
+1. **Checkout code** - Gets latest code
+2. **Setup Python** - Installs Python 3.11 with pip caching
+3. **Install dependencies** - Runs `pip install -r requirements.txt`
+4. **Run import tests** - Verifies all modules import correctly
+   - Tests: models, schemas, auth utilities
+   - Catches missing dependencies
+   - Validates module structure
+5. **Run syntax checks** - Compiles all Python files
+   - Uses `python -m py_compile`
+   - Catches syntax errors
+   - Validates Python code structure
+
+**Why it matters:**
+- Ensures all dependencies are listed
+- Catches import errors early
+- Validates Python syntax
+
+#### 3. All Checks Job
+
+**Purpose:** Final status gate
+
+**Dependencies:** Requires both frontend-checks and backend-tests to pass
+
+**Why it matters:**
+- Single status check for branch protection
+- Clear pass/fail indicator
+- Prevents merge if any job fails
+
+### Running Pipeline Locally
+
+Before pushing, you can run the same checks locally:
+
+#### Frontend Checks
+```bash
+cd frontend
+npm ci
+npm run lint
+npm run build
+```
+
+#### Backend Tests
+```bash
+cd backend
+pip install -r requirements.txt
+
+# Test imports
+python -c "from models import User, Project, Site; print('✓ Imports OK')"
+
+# Test syntax
+python -m py_compile main.py database.py models.py
+```
+
+### Pipeline Status Badge
+
+Add to your README:
+```markdown
+[![CI/CD Pipeline](https://github.com/yourusername/darukaa.earth/workflows/Darukaa.Earth%20CI/CD%20Pipeline/badge.svg)](https://github.com/yourusername/darukaa.earth/actions)
+```
+
+### Branch Protection Rules
+
+**Recommended settings:**
+
+1. Go to: Settings → Branches → Branch protection rules
+2. Add rule for `main` branch:
+   - ☑ Require status checks to pass before merging
+   - ☑ Require branches to be up to date before merging
+   - Select: `All Checks Passed`
+   - ☑ Require linear history
+   - ☑ Include administrators
+
+**Result:** No code can be merged to main without passing all CI checks.
+
+### Continuous Deployment (Future)
+
+The pipeline can be extended for automatic deployment:
+
+```yaml
+deploy-production:
+  needs: [frontend-checks, backend-tests]
+  if: github.ref == 'refs/heads/main'
+  steps:
+    - name: Deploy to production
+      run: |
+        # Deploy frontend to Vercel/Netlify
+        # Deploy backend to AWS/Heroku
+```
+
+---
+
+## 📚 API Documentation
+
+### Interactive Documentation
+
+Once the backend is running, access:
+
+- **Swagger UI:** http://localhost:8000/docs
+- **ReDoc:** http://localhost:8000/redoc
+
+### Authentication Endpoints
+
+#### POST /auth/register
+Register a new user
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "username": "johndoe",
+  "password": "SecurePass123!",
+  "full_name": "John Doe",
+  "is_admin": false
+}
+```
+
+**Response:** 201 Created
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "username": "johndoe",
+  "full_name": "John Doe",
+  "is_active": true,
+  "is_admin": false,
+  "created_at": "2026-09-18T12:00:00Z"
+}
+```
+
+#### POST /auth/login
+Login and receive JWT token
+
+**Request:**
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePass123!"
+}
+```
+
+**Response:** 200 OK
+```json
+{
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+  "token_type": "bearer",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "username": "johndoe",
+    "is_admin": false
+  }
+}
+```
+
+#### GET /auth/me
+Get current user information
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:** 200 OK
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "username": "johndoe",
+  "is_admin": false
+}
+```
+
+### Project Endpoints (Admin Only)
+
+#### POST /projects
+Create a new project
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request:**
+```json
+{
+  "name": "Coastal Mangrove Restoration",
+  "description": "Restoring mangrove forests in coastal areas",
+  "status": "active"
+}
+```
+
+**Response:** 201 Created
+
+#### GET /projects
+List all projects with their sites
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:** 200 OK (array of projects with nested sites)
+
+### Site Endpoints (Admin Only)
+
+#### POST /sites
+Create a geographical site
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Request:**
+```json
+{
+  "name": "Site Alpha",
+  "description": "Primary restoration area",
+  "project_id": 1,
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [[
+      [77.5946, 12.9716],
+      [77.5956, 12.9716],
+      [77.5956, 12.9726],
+      [77.5946, 12.9726],
+      [77.5946, 12.9716]
+    ]]
+  },
+  "area_hectares": 100,
+  "location_info": "Near coastal highway"
+}
+```
+
+**Response:** 201 Created
+
+#### GET /sites
+List all sites
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Response:** 200 OK (array of sites with GeoJSON geometry)
+
+### Error Responses
+
+All endpoints return structured error responses:
+
+**401 Unauthorized:**
+```json
+{
+  "detail": "Could not validate credentials"
+}
+```
+
+**403 Forbidden:**
+```json
+{
+  "detail": "The user doesn't have enough privileges"
+}
+```
+
+**404 Not Found:**
+```json
+{
+  "detail": "Project with id 99 not found"
+}
+```
+
+---
+
+## 📖 Usage Guide
+
+### For Regular Users
+
+1. **Register and Login**
+   - Navigate to http://localhost:5173
+   - Register with your email
+   - Login to access dashboard
+
+2. **View Map**
+   - See all project sites as colored polygons
+   - Navigate with mouse or controls
+   - Zoom in/out with scroll wheel
+
+3. **View Site Analytics**
+   - Click on any site polygon
+   - Analytics modal opens
+   - View performance charts and statistics
+
+### For Administrators
+
+All regular user features, plus:
+
+1. **Draw New Sites**
+   - Click polygon tool (top-left)
+   - Click on map to place vertices
+   - Double-click to complete polygon
+   - Click "Save Site" button
+   - Enter site details
+
+2. **Manage Projects**
+   - Use API endpoints to create projects
+   - Assign sites to projects
+   - Update project status
+
+3. **Site Operations**
+   - Create single or multiple sites
+   - Delete sites when needed
+   - View all sites across projects
+
+---
+
+## 📂 Project Structure
+
+```
+darukaa.earth/
+├── .github/
+│   └── workflows/
+│       └── main.yml              # CI/CD pipeline configuration
+│
+├── backend/
+│   ├── venv/                     # Python virtual environment
+│   ├── .env                      # Environment variables (not in git)
+│   ├── .env.example              # Environment template
+│   ├── main.py                   # FastAPI application entry
+│   ├── database.py               # Database configuration
+│   ├── models.py                 # SQLAlchemy models
+│   ├── schemas.py                # Pydantic schemas
+│   ├── auth.py                   # Authentication utilities
+│   ├── routes_auth.py            # Auth endpoints
+│   ├── routes_projects.py        # Project endpoints
+│   ├── routes_sites.py           # Site endpoints
+│   ├── test_startup.py           # Startup verification
+│   ├── requirements.txt          # Python dependencies
+│   └── README.md                 # Backend documentation
+│
+├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Login.jsx         # Authentication UI
+│   │   │   ├── Login.css
+│   │   │   ├── Dashboard.jsx     # Main dashboard
+│   │   │   ├── Dashboard.css
+│   │   │   ├── MapView.jsx       # Mapbox integration
+│   │   │   ├── MapView.css
+│   │   │   ├── SiteAnalytics.jsx # Highcharts modal
+│   │   │   └── SiteAnalytics.css
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx   # Auth state management
+│   │   ├── services/
+│   │   │   └── api.js            # API client
+│   │   ├── App.jsx               # Router setup
+│   │   ├── App.css
+│   │   ├── main.jsx              # Entry point
+│   │   └── index.css
+│   ├── .env                      # Environment variables (not in git)
+│   ├── .husky/                   # Git hooks
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── eslint.config.js
+│   └── README.md                 # Frontend documentation
+│
+├── .gitignore
+└── README.md                     # This file
+```
+
+---
+
+## 🤝 Contributing
+
+### Development Workflow
+
+1. **Fork the repository**
+2. **Create a feature branch**
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+3. **Make your changes**
+4. **Run tests locally**
+   ```bash
+   # Frontend
+   cd frontend && npm run lint && npm run build
+   
+   # Backend
+   cd backend && python test_startup.py
+   ```
+5. **Commit with meaningful messages**
+   ```bash
+   git commit -m "feat: add new feature"
+   ```
+6. **Push to your fork**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+7. **Create a Pull Request**
+8. **Wait for CI/CD checks to pass**
+9. **Address review comments**
+10. **Merge when approved**
+
+### Code Style Guidelines
+
+**Python (Backend):**
+- Follow PEP 8
+- Use type hints
+- Document functions with docstrings
+- Keep functions focused and small
+
+**JavaScript/React (Frontend):**
+- Use functional components
+- Follow React hooks best practices
+- Use meaningful variable names
+- Add comments for complex logic
+
+**Git Commit Messages:**
+- `feat:` New feature
+- `fix:` Bug fix
+- `docs:` Documentation changes
+- `style:` Code style changes
+- `refactor:` Code refactoring
+- `test:` Test updates
+- `chore:` Build/config changes
+
+### Pre-commit Hooks
+
+The project uses Husky and lint-staged:
+- Automatically runs on `git commit`
+- Formats code with Prettier
+- Lints code with ESLint
+- Prevents committing broken code
+
+---
+
+## 📄 License
+
+This project is part of the Darukaa.Earth initiative for environmental conservation and restoration.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Mapbox** for interactive mapping
+- **Highcharts** for data visualization
+- **PostGIS** for spatial database capabilities
+- **FastAPI** for modern Python web framework
+- **React** for powerful UI development
+- **Supabase** for managed PostgreSQL hosting
+
+---
+
+## 📞 Support
+
+For issues, questions, or contributions:
+- Open an issue on GitHub
+- Check existing documentation
+- Review API docs at `/docs` endpoint
+
+---
+
+**Built with ❤️ for environmental conservation worldwide** 🌍🌱
