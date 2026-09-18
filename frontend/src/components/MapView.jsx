@@ -16,6 +16,31 @@ const MapView = ({ onSiteClick, isAdmin }) => {
   const [sites, setSites] = useState([])
   const [drawnFeatures, setDrawnFeatures] = useState([])
   const [loading, setLoading] = useState(false)
+  const [webglSupported, setWebglSupported] = useState(true)
+  const [webglError, setWebglError] = useState(null)
+
+  // Check WebGL support on mount
+  useEffect(() => {
+    const canvas = document.createElement('canvas')
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+    
+    if (!gl) {
+      setWebglSupported(false)
+      setWebglError('WebGL is not supported by your browser or device')
+    } else {
+      // Try to create a WebGL context to verify it works
+      try {
+        const extension = gl.getExtension('WEBGL_lose_context')
+        if (extension) {
+          extension.loseContext()
+        }
+        setWebglSupported(true)
+      } catch (e) {
+        setWebglSupported(false)
+        setWebglError('WebGL context creation failed: ' + e.message)
+      }
+    }
+  }, [])
 
   const loadSites = useCallback(async () => {
     try {
@@ -45,40 +70,58 @@ const MapView = ({ onSiteClick, isAdmin }) => {
   // Initialize map
   useEffect(() => {
     if (map.current) return // Initialize map only once
+    if (!webglSupported) return // Don't initialize if WebGL not supported
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/satellite-streets-v12',
-      center: [77.5946, 12.9716], // Bangalore, India as default
-      zoom: 12,
-    })
-
-    // Add navigation controls
-    map.current.addControl(new mapboxgl.NavigationControl(), 'top-right')
-
-    // Add fullscreen control
-    map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right')
-
-    // Initialize Mapbox Draw for admins
-    if (isAdmin) {
-      draw.current = new MapboxDraw({
-        displayControlsDefault: false,
-        controls: {
-          polygon: true,
-          trash: true,
-        },
-        defaultMode: 'simple_select',
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        center: [77.5946, 12.9716], // Bangalore, India as default
+        zoom: 12,
+        failIfMajorPerformanceCaveat: false, // Don't fail on performance issues
+        preserveDrawingBuffer: true, // Better compatibility
       })
-      map.current.addControl(draw.current, 'top-left')
 
-      // Listen to draw events
-      map.current.on('draw.create', updateDrawnFeatures)
-      map.current.on('draw.update', updateDrawnFeatures)
-      map.current.on('draw.delete', updateDrawnFeatures)
+      // Handle WebGL context loss
+      map.current.on('error', (e) => {
+        console.error('Mapbox error:', e.error)
+        if (e.error && e.error.message && e.error.message.includes('WebGL')) {
+          setWebglSupported(false)
+          setWebglError('WebGL context lost. Please refresh the page or try a different browser.')
+        }
+      })
+
+      // Add navigation controls
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right')
+
+      // Add fullscreen control
+      map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right')
+
+      // Initialize Mapbox Draw for admins
+      if (isAdmin) {
+        draw.current = new MapboxDraw({
+          displayControlsDefault: false,
+          controls: {
+            polygon: true,
+            trash: true,
+          },
+          defaultMode: 'simple_select',
+        })
+        map.current.addControl(draw.current, 'top-left')
+
+        // Listen to draw events
+        map.current.on('draw.create', updateDrawnFeatures)
+        map.current.on('draw.update', updateDrawnFeatures)
+        map.current.on('draw.delete', updateDrawnFeatures)
+      }
+
+      // Load existing sites
+      loadSites()
+    } catch (error) {
+      console.error('Map initialization error:', error)
+      setWebglSupported(false)
+      setWebglError('Failed to initialize map: ' + error.message)
     }
-
-    // Load existing sites
-    loadSites()
 
     return () => {
       if (map.current) {
@@ -86,7 +129,7 @@ const MapView = ({ onSiteClick, isAdmin }) => {
         map.current = null
       }
     }
-  }, [isAdmin, loadSites, updateDrawnFeatures])
+  }, [isAdmin, loadSites, updateDrawnFeatures, webglSupported])
 
   const addSitesToMap = (sitesData) => {
     if (!map.current || !sitesData || sitesData.length === 0) return
@@ -282,47 +325,81 @@ const MapView = ({ onSiteClick, isAdmin }) => {
 
   return (
     <div className="map-view">
-      <div ref={mapContainer} className="map-container" />
-      
-      {isAdmin && (
-        <div className="map-controls">
-          <div className="control-panel">
-            <h3>Drawing Tools</h3>
-            <p className="control-hint">
-              Use the polygon tool (top-left) to draw new sites
-            </p>
-            <div className="control-stats">
-              <span>Drawn polygons: {drawnFeatures.length}</span>
+      {!webglSupported ? (
+        <div className="webgl-error">
+          <div className="error-content">
+            <h2>⚠️ Map Display Not Available</h2>
+            <p><strong>WebGL Error:</strong> {webglError}</p>
+            <div className="error-details">
+              <h3>Possible Solutions:</h3>
+              <ul>
+                <li>Try using a different browser (Chrome, Firefox, Edge)</li>
+                <li>Enable hardware acceleration in your browser settings</li>
+                <li>Update your graphics drivers</li>
+                <li>Try refreshing the page</li>
+              </ul>
+              <h3>Browser Compatibility:</h3>
+              <ul>
+                <li>✓ Chrome 56+</li>
+                <li>✓ Firefox 49+</li>
+                <li>✓ Safari 10.1+</li>
+                <li>✓ Edge 79+</li>
+              </ul>
             </div>
-            <div className="control-buttons">
-              <button
-                onClick={handleSaveDrawings}
-                disabled={drawnFeatures.length === 0 || loading}
-                className="btn btn-primary"
-              >
-                {loading ? 'Saving...' : '💾 Save Site'}
-              </button>
-              <button
-                onClick={handleClearDrawings}
-                disabled={drawnFeatures.length === 0}
-                className="btn btn-secondary"
-              >
-                🗑️ Clear
-              </button>
-              <button
-                onClick={loadSites}
-                className="btn btn-secondary"
-              >
-                🔄 Refresh Sites
-              </button>
-            </div>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="btn btn-primary"
+              style={{ marginTop: '20px' }}
+            >
+              🔄 Refresh Page
+            </button>
           </div>
         </div>
-      )}
+      ) : (
+        <>
+          <div ref={mapContainer} className="map-container" />
+          
+          {isAdmin && (
+            <div className="map-controls">
+              <div className="control-panel">
+                <h3>Drawing Tools</h3>
+                <p className="control-hint">
+                  Use the polygon tool (top-left) to draw new sites
+                </p>
+                <div className="control-stats">
+                  <span>Drawn polygons: {drawnFeatures.length}</span>
+                </div>
+                <div className="control-buttons">
+                  <button
+                    onClick={handleSaveDrawings}
+                    disabled={drawnFeatures.length === 0 || loading}
+                    className="btn btn-primary"
+                  >
+                    {loading ? 'Saving...' : '💾 Save Site'}
+                  </button>
+                  <button
+                    onClick={handleClearDrawings}
+                    disabled={drawnFeatures.length === 0}
+                    className="btn btn-secondary"
+                  >
+                    🗑️ Clear
+                  </button>
+                  <button
+                    onClick={loadSites}
+                    className="btn btn-secondary"
+                  >
+                    🔄 Refresh Sites
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
-      <div className="map-info">
-        <span>Total sites: {sites.length}</span>
-      </div>
+          <div className="map-info">
+            <span>Total sites: {sites.length}</span>
+          </div>
+        </>
+      )}
     </div>
   )
 }
