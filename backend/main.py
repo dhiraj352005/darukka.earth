@@ -1,11 +1,21 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+import logging
+import json
 
 from database import init_postgis, create_tables
 from routes_auth import router as auth_router
 from routes_projects import router as projects_router
 from routes_sites import router as sites_router
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -29,6 +39,28 @@ app = FastAPI(
     description="API for managing restoration and conservation projects with PostGIS spatial data",
     lifespan=lifespan
 )
+
+
+# Custom middleware to log all requests
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    """Log all incoming requests for debugging"""
+    logger.info(f"🔍 INCOMING REQUEST:")
+    logger.info(f"  Method: {request.method}")
+    logger.info(f"  URL: {request.url}")
+    logger.info(f"  Origin: {request.headers.get('origin', 'No origin')}")
+    logger.info(f"  Headers: {dict(request.headers)}")
+    
+    # Process the request
+    response = await call_next(request)
+    
+    # Log the response
+    logger.info(f"📤 RESPONSE:")
+    logger.info(f"  Status: {response.status_code}")
+    logger.info(f"  CORS Headers: {[(k, v) for k, v in response.headers.items() if 'access-control' in k.lower()]}")
+    
+    return response
+
 
 # Configure CORS - Allow all origins for public access
 # IMPORTANT: CORS middleware must be added BEFORE including routers
@@ -75,6 +107,15 @@ async def health_check():
         "database": "connected",
         "postgis": "enabled"
     }
+
+
+@app.options("/test-cors")
+async def test_cors():
+    """
+    Test endpoint to verify CORS is working
+    """
+    logger.info("🧪 CORS test endpoint called")
+    return {"message": "CORS is working", "cors_enabled": True}
 
 
 if __name__ == "__main__":
