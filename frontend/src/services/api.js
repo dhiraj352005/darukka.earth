@@ -1,8 +1,7 @@
 import axios from 'axios'
 
-// For Vercel: API_URL will be empty (same domain)
-// Frontend calls /api/* which Vercel routes to backend
-const API_URL = import.meta.env.VITE_API_URL || ''
+// Backend URL from environment variable
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 
 // Create axios instance
 const api = axios.create({
@@ -28,26 +27,26 @@ api.interceptors.request.use(
 
 // Authentication endpoints
 export const authAPI = {
-  register: (userData) => api.post('/api/auth/register', userData),
-  login: (credentials) => api.post('/api/auth/login', credentials),
-  getCurrentUser: () => api.get('/api/auth/me'),
+  register: (userData) => api.post('/auth/register', userData),
+  login: (credentials) => api.post('/auth/login', credentials),
+  getCurrentUser: () => api.get('/auth/me'),
 }
 
 // Project endpoints
 export const projectAPI = {
-  getAll: () => api.get('/api/projects/'),
-  getById: (id) => api.get(`/api/projects/${id}/`),
-  create: (projectData) => api.post('/api/projects/', projectData),
-  delete: (id) => api.delete(`/api/projects/${id}/`),
+  getAll: () => api.get('/projects/'),
+  getById: (id) => api.get(`/projects/${id}/`),
+  create: (projectData) => api.post('/projects/', projectData),
+  delete: (id) => api.delete(`/projects/${id}/`),
 }
 
 // Site endpoints
 export const siteAPI = {
-  getAll: () => api.get('/api/sites/'),
-  getById: (id) => api.get(`/api/sites/${id}/`),
-  create: (siteData) => api.post('/api/sites/', siteData),
-  createBulk: (sitesData) => api.post('/api/sites/bulk/', sitesData),
-  delete: (id) => api.delete(`/api/sites/${id}/`),
+  getAll: () => api.get('/sites/'),
+  getById: (id) => api.get(`/sites/${id}/`),
+  create: (siteData) => api.post('/sites/', siteData),
+  createBulk: (sitesData) => api.post('/sites/bulk/', sitesData),
+  delete: (id) => api.delete(`/sites/${id}/`),
 }
 
 export default api
