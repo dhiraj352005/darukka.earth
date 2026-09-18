@@ -30,17 +30,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS - Allow Vercel frontend
-origins = [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "https://darukka-earth-bj6a.vercel.app",  # Your Vercel frontend
-    "https://darukka-earth.vercel.app",  # Production domain (if exists)
-]
-
+# Configure CORS - Allow all origins (for testing)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Allow all origins temporarily
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
