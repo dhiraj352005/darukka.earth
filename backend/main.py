@@ -30,26 +30,19 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
-origins = [
-    "http://localhost:5173",  # Vite dev server
-    "http://localhost:3000",  # React dev server (alternative)
-    "https://*.vercel.app",  # All Vercel preview deployments
-    "https://darukaa-earth.vercel.app",  # Production frontend
-]
-
+# Configure CORS - Allow all Vercel deployments
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Allow all origins for now (Vercel handles security)
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers with /api prefix for Vercel
-app.include_router(auth_router, prefix="/api")
-app.include_router(projects_router, prefix="/api")
-app.include_router(sites_router, prefix="/api")
+# Include routers (no /api prefix - handled by vercel routing)
+app.include_router(auth_router)
+app.include_router(projects_router)
+app.include_router(sites_router)
 
 
 @app.get("/")
