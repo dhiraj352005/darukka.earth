@@ -1,7 +1,12 @@
 import axios from 'axios';
 
-// Use environment variable for API base URL with fallback
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+// Use environment variable for API base URL - NO fallback to localhost in production
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+if (!API_BASE_URL) {
+  console.error('VITE_API_BASE_URL environment variable is not set!');
+  throw new Error('VITE_API_BASE_URL environment variable is required. Please set it in your .env file or Vercel environment variables.');
+}
 
 // Create axios instance with default config
 const api = axios.create({
