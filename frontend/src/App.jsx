@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
