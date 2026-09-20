@@ -3,3 +3,9 @@ uvicorn[standard]==0.24.0
 pydantic[email]==2.5.0
 python-multipart==0.0.6
 bcrypt==3.2.2
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+geoalchemy2==0.14.2
+python-dotenv==1.0.0
+passlib==1.7.4
+python-jose[cryptography]==3.3.0

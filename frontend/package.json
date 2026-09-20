@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=100",
     "preview": "vite preview",
     "prepare": "cd .. && husky install frontend/.husky"
   },
