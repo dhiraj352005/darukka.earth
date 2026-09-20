@@ -104,5 +104,13 @@ def get_users():
         ]
     }
 
+@app.delete("/api/users/clear")
+def clear_users():
+    """Development endpoint to clear all users - REMOVE IN PRODUCTION!"""
+    global users_db, user_id_counter
+    users_db = {}
+    user_id_counter = 1
+    return {"message": "All users cleared", "count": 0}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
