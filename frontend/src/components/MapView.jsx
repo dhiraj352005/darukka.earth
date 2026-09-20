@@ -42,6 +42,7 @@ const MapView = ({ onSiteClick, isAdmin }) => {
     }
 
     const result = checkWebGL()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setWebglSupported(result.supported)
     if (result.error) {
       setWebglError(result.error)
@@ -225,6 +226,7 @@ const MapView = ({ onSiteClick, isAdmin }) => {
 
       // Load existing sites
       if (map.current) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         loadSites().catch(error => {
           console.error('Failed to load sites:', error)
         })
