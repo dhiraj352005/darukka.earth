@@ -21,117 +21,34 @@ const MapView = ({ onSiteClick, isAdmin }) => {
 
   // Check WebGL support on mount
   useEffect(() => {
-    const canvas = document.createElement('canvas')
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
-    
-    if (!gl) {
-      setWebglSupported(false)
-      setWebglError('WebGL is not supported by your browser or device')
-    } else {
+    const checkWebGL = () => {
+      const canvas = document.createElement('canvas')
+      const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl')
+      
+      if (!gl) {
+        return { supported: false, error: 'WebGL is not supported by your browser or device' }
+      }
+      
       // Try to create a WebGL context to verify it works
       try {
         const extension = gl.getExtension('WEBGL_lose_context')
         if (extension) {
           extension.loseContext()
         }
-        setWebglSupported(true)
+        return { supported: true, error: null }
       } catch (e) {
-        setWebglSupported(false)
-        setWebglError('WebGL context creation failed: ' + e.message)
+        return { supported: false, error: 'WebGL context creation failed: ' + e.message }
       }
+    }
+
+    const result = checkWebGL()
+    setWebglSupported(result.supported)
+    if (result.error) {
+      setWebglError(result.error)
     }
   }, [])
 
-  const loadSites = useCallback(async () => {
-    try {
-      const response = await siteAPI.getAll()
-      const sitesData = response.data
-
-      setSites(sitesData)
-
-      // Wait for map to be ready
-      if (!map.current.isStyleLoaded()) {
-        map.current.on('load', () => addSitesToMap(sitesData))
-      } else {
-        addSitesToMap(sitesData)
-      }
-    } catch (error) {
-      console.error('Error loading sites:', error)
-    }
-  }, [])
-
-  const updateDrawnFeatures = useCallback(() => {
-    if (draw.current) {
-      const data = draw.current.getAll()
-      setDrawnFeatures(data.features)
-    }
-  }, [])
-
-  // Initialize map
-  useEffect(() => {
-    if (map.current) return // Initialize map only once
-    if (!webglSupported) return // Don't initialize if WebGL not supported
-
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: 'mapbox://styles/mapbox/satellite-streets-v12',
-        center: [77.5946, 12.9716], // Bangalore, India as default
-        zoom: 12,
-        failIfMajorPerformanceCaveat: false, // Don't fail on performance issues
-        preserveDrawingBuffer: true, // Better compatibility
-      })
-
-      // Handle WebGL context loss
-      map.current.on('error', (e) => {
-        console.error('Mapbox error:', e.error)
-        if (e.error && e.error.message && e.error.message.includes('WebGL')) {
-          setWebglSupported(false)
-          setWebglError('WebGL context lost. Please refresh the page or try a different browser.')
-        }
-      })
-
-      // Add navigation controls
-      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right')
-
-      // Add fullscreen control
-      map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right')
-
-      // Initialize Mapbox Draw for admins
-      if (isAdmin) {
-        draw.current = new MapboxDraw({
-          displayControlsDefault: false,
-          controls: {
-            polygon: true,
-            trash: true,
-          },
-          defaultMode: 'simple_select',
-        })
-        map.current.addControl(draw.current, 'top-left')
-
-        // Listen to draw events
-        map.current.on('draw.create', updateDrawnFeatures)
-        map.current.on('draw.update', updateDrawnFeatures)
-        map.current.on('draw.delete', updateDrawnFeatures)
-      }
-
-      // Load existing sites
-      loadSites()
-    } catch (error) {
-      console.error('Map initialization error:', error)
-      setWebglSupported(false)
-      setWebglError('Failed to initialize map: ' + error.message)
-    }
-
-    return () => {
-      if (map.current) {
-        map.current.remove()
-        map.current = null
-      }
-    }
-  }, [isAdmin, loadSites, updateDrawnFeatures, webglSupported])
-
-  const addSitesToMap = (sitesData) => {
+  const addSitesToMap = useCallback((sitesData) => {
     if (!map.current || !sitesData || sitesData.length === 0) return
 
     // Remove existing source and layer if they exist
@@ -231,7 +148,100 @@ const MapView = ({ onSiteClick, isAdmin }) => {
       })
       map.current.fitBounds(bounds, { padding: 50 })
     }
-  }
+  }, [onSiteClick])
+
+  const loadSites = useCallback(async () => {
+    try {
+      const response = await siteAPI.getAll()
+      const sitesData = response.data
+
+      setSites(sitesData)
+
+      // Wait for map to be ready
+      if (!map.current.isStyleLoaded()) {
+        map.current.on('load', () => addSitesToMap(sitesData))
+      } else {
+        addSitesToMap(sitesData)
+      }
+    } catch (error) {
+      console.error('Error loading sites:', error)
+    }
+  }, [addSitesToMap])
+
+  const updateDrawnFeatures = useCallback(() => {
+    if (draw.current) {
+      const data = draw.current.getAll()
+      setDrawnFeatures(data.features)
+    }
+  }, [])
+
+  // Initialize map
+  useEffect(() => {
+    if (map.current) return // Initialize map only once
+    if (!webglSupported) return // Don't initialize if WebGL not supported
+
+    try {
+      map.current = new mapboxgl.Map({
+        container: mapContainer.current,
+        style: 'mapbox://styles/mapbox/satellite-streets-v12',
+        center: [77.5946, 12.9716], // Bangalore, India as default
+        zoom: 12,
+        failIfMajorPerformanceCaveat: false, // Don't fail on performance issues
+        preserveDrawingBuffer: true, // Better compatibility
+      })
+
+      // Handle WebGL context loss
+      map.current.on('error', (e) => {
+        console.error('Mapbox error:', e.error)
+        if (e.error && e.error.message && e.error.message.includes('WebGL')) {
+          setWebglSupported(false)
+          setWebglError('WebGL context lost. Please refresh the page or try a different browser.')
+        }
+      })
+
+      // Add navigation controls
+      map.current.addControl(new mapboxgl.NavigationControl(), 'top-right')
+
+      // Add fullscreen control
+      map.current.addControl(new mapboxgl.FullscreenControl(), 'top-right')
+
+      // Initialize Mapbox Draw for admins
+      if (isAdmin) {
+        draw.current = new MapboxDraw({
+          displayControlsDefault: false,
+          controls: {
+            polygon: true,
+            trash: true,
+          },
+          defaultMode: 'simple_select',
+        })
+        map.current.addControl(draw.current, 'top-left')
+
+        // Listen to draw events
+        map.current.on('draw.create', updateDrawnFeatures)
+        map.current.on('draw.update', updateDrawnFeatures)
+        map.current.on('draw.delete', updateDrawnFeatures)
+      }
+
+      // Load existing sites
+      if (map.current) {
+        loadSites().catch(error => {
+          console.error('Failed to load sites:', error)
+        })
+      }
+    } catch (error) {
+      console.error('Map initialization error:', error)
+      setWebglSupported(false)
+      setWebglError('Failed to initialize map: ' + error.message)
+    }
+
+    return () => {
+      if (map.current) {
+        map.current.remove()
+        map.current = null
+      }
+    }
+  }, [isAdmin, loadSites, updateDrawnFeatures, webglSupported])
 
   const handleSaveDrawings = async () => {
     if (!drawnFeatures || drawnFeatures.length === 0) {
