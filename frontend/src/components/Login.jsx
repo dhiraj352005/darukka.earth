@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
 import './Login.css'
 
 const Login = () => {
@@ -8,15 +7,12 @@ const Login = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    username: '',
-    full_name: '',
-    is_admin: false,
+    name: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const { login, register } = useAuth()
-  const navigate = useNavigate()
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -39,13 +35,12 @@ const Login = () => {
         result = await register(formData)
       }
 
-      if (result.success) {
-        navigate('/dashboard')
-      } else {
-        setError(result.error)
+      if (!result.success) {
+        setError(result.error || 'Authentication failed')
       }
-    } catch {
-      setError('An unexpected error occurred')
+      // On success, AuthContext will update user state and App.jsx will show Dashboard
+    } catch (err) {
+      setError('An unexpected error occurred: ' + err.message)
     } finally {
       setLoading(false)
     }
@@ -78,32 +73,17 @@ const Login = () => {
           {error && <div className="error-message">{error}</div>}
 
           {!isLogin && (
-            <>
-              <div className="form-group">
-                <label htmlFor="username">Username</label>
-                <input
-                  type="text"
-                  id="username"
-                  name="username"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter username"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="full_name">Full Name</label>
-                <input
-                  type="text"
-                  id="full_name"
-                  name="full_name"
-                  value={formData.full_name}
-                  onChange={handleChange}
-                  placeholder="Enter full name (optional)"
-                />
-              </div>
-            </>
+            <div className="form-group">
+              <label htmlFor="name">Name</label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="Enter your name (optional)"
+              />
+            </div>
           )}
 
           <div className="form-group">
@@ -133,22 +113,8 @@ const Login = () => {
             />
           </div>
 
-          {!isLogin && (
-            <div className="form-group checkbox-group">
-              <label>
-                <input
-                  type="checkbox"
-                  name="is_admin"
-                  checked={formData.is_admin}
-                  onChange={handleChange}
-                />
-                <span>Register as Administrator</span>
-              </label>
-            </div>
-          )}
-
           <button type="submit" className="submit-btn" disabled={loading}>
-            {loading ? 'Please wait...' : isLogin ? 'Login' : 'Register'}
+            {loading ? 'Please wait...' : isLogin ? 'LOGIN' : 'REGISTER'}
           </button>
         </form>
 

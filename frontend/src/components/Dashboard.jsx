@@ -1,20 +1,20 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { useNavigate } from 'react-router-dom'
-import { Toaster } from 'react-hot-toast'
 import MapView from './MapView'
 import SiteAnalytics from './SiteAnalytics'
 import './Dashboard.css'
 
 const Dashboard = () => {
-  const { user, logout, isAdmin } = useAuth()
-  const navigate = useNavigate()
+  const { user, logout } = useAuth()
   const [selectedSite, setSelectedSite] = useState(null)
   const [showAnalytics, setShowAnalytics] = useState(false)
+  
+  // Check if user is admin (adjust based on your user object structure)
+  const isAdmin = user?.is_admin || user?.isAdmin || false
 
   const handleLogout = () => {
     logout()
-    navigate('/')
+    // User state will be cleared and App.jsx will show Login
   }
 
   const handleSiteClick = (siteProperties) => {
@@ -30,43 +30,14 @@ const Dashboard = () => {
 
   // Get user initials for avatar
   const getUserInitials = () => {
-    if (user?.full_name) {
-      return user.full_name.split(' ').map(n => n[0]).join('').slice(0, 2)
+    if (user?.name) {
+      return user.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()
     }
-    return user?.username?.slice(0, 2) || 'U'
+    return user?.email?.slice(0, 2).toUpperCase() || 'U'
   }
 
   return (
     <div className="dashboard">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: 'white',
-            color: 'var(--slate-900)',
-            border: '1px solid var(--slate-200)',
-            padding: '16px',
-            borderRadius: '12px',
-            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.12)',
-            fontSize: '14px',
-            fontWeight: '500',
-          },
-          success: {
-            iconTheme: {
-              primary: 'var(--success)',
-              secondary: 'white',
-            },
-          },
-          error: {
-            iconTheme: {
-              primary: 'var(--error)',
-              secondary: 'white',
-            },
-          },
-        }}
-      />
-      
       <header className="dashboard-header">
         <div className="header-left">
           <h1>🌍 Darukaa.Earth</h1>
@@ -77,7 +48,7 @@ const Dashboard = () => {
             <div className="user-avatar">{getUserInitials()}</div>
             <div className="user-details">
               <span className="user-name">
-                {user?.full_name || user?.username}
+                {user?.name || user?.email}
                 {isAdmin && <span className="admin-badge">Admin</span>}
               </span>
               <span className="user-email">{user?.email}</span>

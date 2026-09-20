@@ -68,6 +68,54 @@ export const userAPI = {
   },
 };
 
+// Site API endpoints
+export const siteAPI = {
+  getAll: async () => {
+    const response = await api.get('/api/sites');
+    return response;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/api/sites/${id}`);
+    return response;
+  },
+  create: async (siteData) => {
+    const response = await api.post('/api/sites', siteData);
+    return response;
+  },
+  update: async (id, siteData) => {
+    const response = await api.put(`/api/sites/${id}`, siteData);
+    return response;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/api/sites/${id}`);
+    return response;
+  },
+};
+
+// Project API endpoints
+export const projectAPI = {
+  getAll: async () => {
+    const response = await api.get('/api/projects');
+    return response;
+  },
+  getById: async (id) => {
+    const response = await api.get(`/api/projects/${id}`);
+    return response;
+  },
+  create: async (projectData) => {
+    const response = await api.post('/api/projects', projectData);
+    return response;
+  },
+  update: async (id, projectData) => {
+    const response = await api.put(`/api/projects/${id}`, projectData);
+    return response;
+  },
+  delete: async (id) => {
+    const response = await api.delete(`/api/projects/${id}`);
+    return response;
+  },
+};
+
 // Health check
 export const healthCheck = async () => {
   const response = await api.get('/health');
