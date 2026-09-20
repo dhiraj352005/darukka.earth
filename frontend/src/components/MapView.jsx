@@ -18,6 +18,7 @@ const MapView = ({ onSiteClick, isAdmin }) => {
   const [loading, setLoading] = useState(false)
   const [webglSupported, setWebglSupported] = useState(true)
   const [webglError, setWebglError] = useState(null)
+  const [componentError, setComponentError] = useState(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [saveFormData, setSaveFormData] = useState({
     siteName: '',
@@ -58,7 +59,7 @@ const MapView = ({ onSiteClick, isAdmin }) => {
   }, [])
 
   const addSitesToMap = useCallback((sitesData) => {
-    if (!map.current || !sitesData || sitesData.length === 0) return
+    if (!map.current || !sitesData || !Array.isArray(sitesData) || sitesData.length === 0) return
 
     // Remove existing source and layer if they exist
     if (map.current.getLayer('sites-layer')) {
@@ -75,8 +76,8 @@ const MapView = ({ onSiteClick, isAdmin }) => {
     const geojsonFeatures = sitesData.map((site) => {
       let geometry
       try {
-        // Parse the geometry string from the API
-        geometry = JSON.parse(site.geometry)
+        // Parse the geometry string from the API, or use it directly if already an object
+        geometry = typeof site.geometry === 'string' ? JSON.parse(site.geometry) : site.geometry
       } catch (e) {
         console.error('Error parsing geometry for site:', site.id, e)
         return null
@@ -162,17 +163,21 @@ const MapView = ({ onSiteClick, isAdmin }) => {
   const loadSites = useCallback(async () => {
     try {
       const sitesData = await siteAPI.getAll()
-
-      setSites(sitesData)
+      
+      // Ensure sitesData is an array
+      const sites = Array.isArray(sitesData) ? sitesData : []
+      
+      setSites(sites)
 
       // Wait for map to be ready
       if (!map.current.isStyleLoaded()) {
-        map.current.on('load', () => addSitesToMap(sitesData))
+        map.current.on('load', () => addSitesToMap(sites))
       } else {
-        addSitesToMap(sitesData)
+        addSitesToMap(sites)
       }
     } catch (error) {
       console.error('Error loading sites:', error)
+      setSites([]) // Set empty array on error
     }
   }, [addSitesToMap])
 
@@ -287,7 +292,8 @@ const MapView = ({ onSiteClick, isAdmin }) => {
         }
 
         const projectResponse = await projectAPI.create(projectData)
-        projectId = projectResponse.data.id
+        // API now returns data directly
+        projectId = projectResponse.data?.id || projectResponse.id
       } else {
         projectId = parseInt(saveFormData.projectId)
         if (isNaN(projectId)) {
@@ -312,8 +318,8 @@ const MapView = ({ onSiteClick, isAdmin }) => {
       const response = await siteAPI.create(siteData)
       
       // Show success message with analytics
-      // Response is now the data directly (not response.data)
-      const siteInfo = response.data
+      // API returns {data: {...}, analytics: {...}, message: "..."}
+      const siteInfo = response.data || response
       const analytics = response.analytics || {}
       
       alert(
@@ -381,6 +387,10 @@ const MapView = ({ onSiteClick, isAdmin }) => {
       }
       
       alert('Failed to save: ' + errorMsg)
+      
+      // Don't crash the app - stay on the modal
+      setLoading(false)
+      return
     } finally {
       setLoading(false)
     }
@@ -395,7 +405,24 @@ const MapView = ({ onSiteClick, isAdmin }) => {
 
   return (
     <div className="map-view">
-      {!webglSupported ? (
+      {componentError ? (
+        <div className="webgl-error">
+          <div className="error-content">
+            <h2>⚠️ An Error Occurred</h2>
+            <p><strong>Error:</strong> {componentError}</p>
+            <button 
+              onClick={() => {
+                setComponentError(null)
+                window.location.reload()
+              }} 
+              className="btn btn-primary"
+              style={{ marginTop: '20px' }}
+            >
+              🔄 Reload Page
+            </button>
+          </div>
+        </div>
+      ) : !webglSupported ? (
         <div className="webgl-error">
           <div className="error-content">
             <h2>⚠️ Map Display Not Available</h2>
