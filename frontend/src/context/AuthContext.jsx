@@ -56,11 +56,16 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       setError(null)
-      await authAPI.register(userData)
-      // Auto-login after registration
-      return await login(userData.email, userData.password)
+      const response = await authAPI.register(userData)
+      
+      // Backend now returns access_token and user directly
+      const { access_token, user: registeredUser } = response
+      
+      localStorage.setItem('token', access_token)
+      setUser(registeredUser)
+      return { success: true }
     } catch (err) {
-      const errorMessage = err.response?.data?.detail || 'Registration failed'
+      const errorMessage = err.response?.data?.detail || err.message || 'Registration failed'
       setError(errorMessage)
       return { success: false, error: errorMessage }
     }

@@ -49,7 +49,7 @@ def read_root():
 def health_check():
     return {"status": "ok"}
 
-@app.post("/api/register", response_model=UserResponse)
+@app.post("/api/register")
 def register(user: UserRegister):
     global user_id_counter
     
@@ -60,12 +60,17 @@ def register(user: UserRegister):
         existing_user["password"] = user.password  # Update password
         existing_user["name"] = user.name or user.email.split("@")[0]  # Update name
         
-        return UserResponse(
-            id=existing_user["id"],
-            email=existing_user["email"],
-            name=existing_user["name"],
-            message="User updated successfully"
-        )
+        # Return login-ready response
+        return {
+            "access_token": f"mock_token_{existing_user['id']}",
+            "token_type": "bearer",
+            "user": {
+                "id": existing_user["id"],
+                "email": existing_user["email"],
+                "name": existing_user["name"]
+            },
+            "message": "User updated and logged in successfully"
+        }
     
     # Store new user (in production, hash the password!)
     users_db[user.email] = {
@@ -75,17 +80,23 @@ def register(user: UserRegister):
         "name": user.name or user.email.split("@")[0]
     }
     
-    response = UserResponse(
-        id=user_id_counter,
-        email=user.email,
-        name=users_db[user.email]["name"],
-        message="Registration successful"
-    )
+    # Return login-ready response
+    user_data = users_db[user.email]
+    response = {
+        "access_token": f"mock_token_{user_id_counter}",
+        "token_type": "bearer",
+        "user": {
+            "id": user_data["id"],
+            "email": user_data["email"],
+            "name": user_data["name"]
+        },
+        "message": "Registration successful"
+    }
     
     user_id_counter += 1
     return response
 
-@app.post("/api/login", response_model=UserResponse)
+@app.post("/api/login")
 def login(user: UserLogin):
     # Check if user exists
     if user.email not in users_db:
@@ -96,12 +107,16 @@ def login(user: UserLogin):
     if stored_user["password"] != user.password:
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
-    return UserResponse(
-        id=stored_user["id"],
-        email=stored_user["email"],
-        name=stored_user["name"],
-        message="Login successful"
-    )
+    # Return format expected by frontend AuthContext
+    return {
+        "access_token": f"mock_token_{stored_user['id']}",
+        "token_type": "bearer",
+        "user": {
+            "id": stored_user["id"],
+            "email": stored_user["email"],
+            "name": stored_user["name"]
+        }
+    }
 
 @app.get("/api/users")
 def get_users():
