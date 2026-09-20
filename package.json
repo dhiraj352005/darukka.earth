@@ -1,0 +1,9 @@
+{
+  "name": "darukaa-earth",
+  "version": "1.0.0",
+  "description": "Restoration & Conservation Platform",
+  "scripts": {
+    "install": "cd frontend && npm install",
+    "build": "cd frontend && npm run build"
+  }
+}
