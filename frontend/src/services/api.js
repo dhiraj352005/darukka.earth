@@ -78,23 +78,23 @@ export const userAPI = {
 export const siteAPI = {
   getAll: async () => {
     const response = await api.get('/api/sites');
-    return response;
+    return response.data;
   },
   getById: async (id) => {
     const response = await api.get(`/api/sites/${id}`);
-    return response;
+    return response.data;
   },
   create: async (siteData) => {
     const response = await api.post('/api/sites', siteData);
-    return response;
+    return response.data;
   },
   update: async (id, siteData) => {
     const response = await api.put(`/api/sites/${id}`, siteData);
-    return response;
+    return response.data;
   },
   delete: async (id) => {
     const response = await api.delete(`/api/sites/${id}`);
-    return response;
+    return response.data;
   },
 };
 
@@ -102,23 +102,23 @@ export const siteAPI = {
 export const projectAPI = {
   getAll: async () => {
     const response = await api.get('/api/projects');
-    return response;
+    return response.data;
   },
   getById: async (id) => {
     const response = await api.get(`/api/projects/${id}`);
-    return response;
+    return response.data;
   },
   create: async (projectData) => {
     const response = await api.post('/api/projects', projectData);
-    return response;
+    return response.data;
   },
   update: async (id, projectData) => {
     const response = await api.put(`/api/projects/${id}`, projectData);
-    return response;
+    return response.data;
   },
   delete: async (id) => {
     const response = await api.delete(`/api/projects/${id}`);
-    return response;
+    return response.data;
   },
 };
 

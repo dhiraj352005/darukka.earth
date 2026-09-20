@@ -161,8 +161,7 @@ const MapView = ({ onSiteClick, isAdmin }) => {
 
   const loadSites = useCallback(async () => {
     try {
-      const response = await siteAPI.getAll()
-      const sitesData = response.data
+      const sitesData = await siteAPI.getAll()
 
       setSites(sitesData)
 
@@ -313,6 +312,7 @@ const MapView = ({ onSiteClick, isAdmin }) => {
       const response = await siteAPI.create(siteData)
       
       // Show success message with analytics
+      // Response is now the data directly (not response.data)
       const siteInfo = response.data
       const analytics = response.analytics || {}
       
@@ -365,7 +365,21 @@ const MapView = ({ onSiteClick, isAdmin }) => {
 
     } catch (error) {
       console.error('Error saving site:', error)
-      const errorMsg = error.response?.data?.detail || error.message || 'Failed to save site'
+      console.error('Error response:', error.response)
+      console.error('Error data:', error.response?.data)
+      
+      let errorMsg = 'Failed to save site'
+      
+      if (error.response?.data?.detail) {
+        errorMsg = error.response.data.detail
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message
+      } else if (error.message) {
+        errorMsg = error.message
+      } else if (typeof error === 'string') {
+        errorMsg = error
+      }
+      
       alert('Failed to save: ' + errorMsg)
     } finally {
       setLoading(false)
