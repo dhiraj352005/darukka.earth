@@ -23,6 +23,14 @@ const SiteAnalytics = ({ site, onClose }) => {
         return
       }
 
+      // If no site ID, can't fetch analytics
+      if (!site.id) {
+        console.warn('No site ID provided, using provided analytics or empty state')
+        setAnalyticsData(site.analytics || {})
+        setLoading(false)
+        return
+      }
+
       try {
         setLoading(true)
         const response = await axios.get(`${API_BASE_URL}/api/sites/${site.id}/analytics`)
@@ -46,7 +54,19 @@ const SiteAnalytics = ({ site, onClose }) => {
     }
   }, [])
 
-  const historical = analyticsData?.historical_data || {}
+  const historical = analyticsData?.historical_data || { months: [], tree_count: [], co2_sequestration: [], canopy_cover: [], soil_health: [], biodiversity: [] }
+  
+  // Provide default values for all metrics
+  const metrics = {
+    estimated_trees: analyticsData?.estimated_trees || 0,
+    area_hectares: analyticsData?.area_hectares || site.area_hectares || 0,
+    co2_sequestration_annual: analyticsData?.co2_sequestration_annual || 0,
+    co2_offset_vehicles: analyticsData?.co2_offset_vehicles || 0,
+    biodiversity_score: analyticsData?.biodiversity_score || 0,
+    soil_health_index: analyticsData?.soil_health_index || 0,
+    estimated_biomass_tons: analyticsData?.estimated_biomass_tons || 0,
+    canopy_cover_percentage: analyticsData?.canopy_cover_percentage || 0
+  }
 
   // Chart configurations
   const treeGrowthOptions = {
@@ -151,8 +171,8 @@ const SiteAnalytics = ({ site, onClose }) => {
                     <div className="stat-icon" style={{ background: '#dcfce7' }}>🌳</div>
                     <div className="stat-content">
                       <h3>Estimated Trees</h3>
-                      <p className="stat-value">{analyticsData.estimated_trees?.toLocaleString() || 0}</p>
-                      <p className="stat-info">Based on {analyticsData.area_hectares} hectares</p>
+                      <p className="stat-value">{metrics.estimated_trees.toLocaleString()}</p>
+                      <p className="stat-info">Based on {metrics.area_hectares} hectares</p>
                     </div>
                   </div>
 
@@ -160,8 +180,8 @@ const SiteAnalytics = ({ site, onClose }) => {
                     <div className="stat-icon" style={{ background: '#ede9fe' }}>♻️</div>
                     <div className="stat-content">
                       <h3>CO₂ Sequestration</h3>
-                      <p className="stat-value">{analyticsData.co2_sequestration_annual} tons/year</p>
-                      <p className="stat-info">Offsets {analyticsData.co2_offset_vehicles} vehicles annually</p>
+                      <p className="stat-value">{metrics.co2_sequestration_annual} tons/year</p>
+                      <p className="stat-info">Offsets {metrics.co2_offset_vehicles} vehicles annually</p>
                     </div>
                   </div>
 
@@ -169,7 +189,7 @@ const SiteAnalytics = ({ site, onClose }) => {
                     <div className="stat-icon" style={{ background: '#dbeafe' }}>🦋</div>
                     <div className="stat-content">
                       <h3>Biodiversity Score</h3>
-                      <p className="stat-value">{analyticsData.biodiversity_score}</p>
+                      <p className="stat-value">{metrics.biodiversity_score}</p>
                       <p className="stat-info">Species diversity index</p>
                     </div>
                   </div>
@@ -178,7 +198,7 @@ const SiteAnalytics = ({ site, onClose }) => {
                     <div className="stat-icon" style={{ background: '#fef3c7' }}>🌾</div>
                     <div className="stat-content">
                       <h3>Soil Health</h3>
-                      <p className="stat-value">{analyticsData.soil_health_index}%</p>
+                      <p className="stat-value">{metrics.soil_health_index}%</p>
                       <p className="stat-info">Quality index</p>
                     </div>
                   </div>
@@ -187,7 +207,7 @@ const SiteAnalytics = ({ site, onClose }) => {
                     <div className="stat-icon" style={{ background: '#fef2f2' }}>🌱</div>
                     <div className="stat-content">
                       <h3>Biomass</h3>
-                      <p className="stat-value">{analyticsData.estimated_biomass_tons} tons</p>
+                      <p className="stat-value">{metrics.estimated_biomass_tons} tons</p>
                       <p className="stat-info">Total estimated biomass</p>
                     </div>
                   </div>
@@ -196,7 +216,7 @@ const SiteAnalytics = ({ site, onClose }) => {
                     <div className="stat-icon" style={{ background: '#dbeafe' }}>💧</div>
                     <div className="stat-content">
                       <h3>Canopy Cover</h3>
-                      <p className="stat-value">{analyticsData.canopy_cover_percentage}%</p>
+                      <p className="stat-value">{metrics.canopy_cover_percentage}%</p>
                       <p className="stat-info">Current coverage</p>
                     </div>
                   </div>
@@ -243,10 +263,10 @@ const SiteAnalytics = ({ site, onClose }) => {
 
 SiteAnalytics.propTypes = {
   site: PropTypes.shape({
-    id: PropTypes.number.isRequired,
+    id: PropTypes.number,
     name: PropTypes.string.isRequired,
     description: PropTypes.string,
-    project_id: PropTypes.number.isRequired,
+    project_id: PropTypes.number,
     area_hectares: PropTypes.number,
     analytics: PropTypes.object,
   }).isRequired,

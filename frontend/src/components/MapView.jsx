@@ -276,7 +276,7 @@ const MapView = ({ onSiteClick, isAdmin }) => {
 
     setLoading(true)
     let projectId
-
+    
     try {
       if (saveFormData.createNewProject) {
         if (!saveFormData.projectName) {
@@ -317,10 +317,15 @@ const MapView = ({ onSiteClick, isAdmin }) => {
 
       const response = await siteAPI.create(siteData)
       
+      console.log('Site creation response:', response)
+      
       // Show success message with analytics
       // API returns {data: {...}, analytics: {...}, message: "..."}
       const siteInfo = response.data || response
       const analytics = response.analytics || {}
+      
+      console.log('Site info:', siteInfo)
+      console.log('Analytics:', analytics)
       
       alert(
         `✓ Site "${siteInfo.name}" created successfully!\n\n` +
@@ -355,17 +360,21 @@ const MapView = ({ onSiteClick, isAdmin }) => {
       // Reload sites
       await loadSites()
       
-      // Trigger analytics modal
-      if (onSiteClick) {
+      // Trigger analytics modal - with safety checks
+      if (onSiteClick && siteInfo && siteInfo.id) {
         setTimeout(() => {
-          onSiteClick({
-            id: siteInfo.id,
-            name: siteInfo.name,
-            description: siteInfo.description,
-            project_id: siteInfo.project_id,
-            area_hectares: siteInfo.area_hectares,
-            analytics: analytics
-          })
+          try {
+            onSiteClick({
+              id: siteInfo.id,
+              name: siteInfo.name || 'Unknown Site',
+              description: siteInfo.description || '',
+              project_id: siteInfo.project_id || projectId,
+              area_hectares: siteInfo.area_hectares || analytics.area_hectares || 0,
+              analytics: analytics
+            })
+          } catch (modalError) {
+            console.error('Error opening analytics modal:', modalError)
+          }
         }, 500)
       }
 
@@ -388,10 +397,8 @@ const MapView = ({ onSiteClick, isAdmin }) => {
       
       alert('Failed to save: ' + errorMsg)
       
-      // Don't crash the app - stay on the modal
-      setLoading(false)
-      return
     } finally {
+      // Don't crash the app - ensure loading is reset
       setLoading(false)
     }
   }
