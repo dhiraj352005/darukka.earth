@@ -2,193 +2,41 @@ import { useEffect, useState } from 'react'
 import PropTypes from 'prop-types'
 import Highcharts from 'highcharts'
 import HighchartsReact from 'highcharts-react-official'
+import axios from 'axios'
 import './SiteAnalytics.css'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
 const SiteAnalytics = ({ site, onClose }) => {
   const [activeTab, setActiveTab] = useState('overview')
+  const [analyticsData, setAnalyticsData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Generate dummy data for demonstration
-  const generateDummyData = () => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    const currentMonth = new Date().getMonth()
-    
-    return {
-      treeGrowth: months.slice(0, currentMonth + 1).map((month, index) => ({
-        month,
-        count: Math.floor(Math.random() * 500) + 1000 + (index * 100),
-      })),
-      biodiversity: months.slice(0, currentMonth + 1).map((month, index) => ({
-        month,
-        species: Math.floor(Math.random() * 20) + 50 + (index * 2),
-      })),
-      carbonSequestration: months.slice(0, currentMonth + 1).map((month, index) => ({
-        month,
-        tons: (Math.random() * 10 + 20 + (index * 1.5)).toFixed(2),
-      })),
-      soilHealth: months.slice(0, currentMonth + 1).map((month, index) => ({
-        month,
-        quality: (Math.random() * 10 + 70 + (index * 0.5)).toFixed(1),
-      })),
+  // Fetch analytics data from backend
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      // If analytics already provided in site prop, use it
+      if (site.analytics) {
+        setAnalyticsData(site.analytics)
+        setLoading(false)
+        return
+      }
+
+      try {
+        setLoading(true)
+        const response = await axios.get(`${API_BASE_URL}/api/sites/${site.id}/analytics`)
+        setAnalyticsData(response.data)
+      } catch (err) {
+        console.error('Error fetching analytics:', err)
+        setError('Failed to load analytics data')
+      } finally {
+        setLoading(false)
+      }
     }
-  }
 
-  const [analyticsData] = useState(generateDummyData())
-
-  // Tree Growth Chart Configuration
-  const treeGrowthOptions = {
-    chart: {
-      type: 'line',
-      height: 300,
-    },
-    title: {
-      text: 'Tree Growth Over Time',
-      style: {
-        fontSize: '16px',
-        fontWeight: '600',
-      },
-    },
-    xAxis: {
-      categories: analyticsData.treeGrowth.map((d) => d.month),
-      title: {
-        text: 'Month',
-      },
-    },
-    yAxis: {
-      title: {
-        text: 'Number of Trees',
-      },
-    },
-    series: [
-      {
-        name: 'Trees Planted',
-        data: analyticsData.treeGrowth.map((d) => d.count),
-        color: '#10b981',
-      },
-    ],
-    credits: {
-      enabled: false,
-    },
-    legend: {
-      enabled: false,
-    },
-  }
-
-  // Biodiversity Chart Configuration
-  const biodiversityOptions = {
-    chart: {
-      type: 'area',
-      height: 300,
-    },
-    title: {
-      text: 'Biodiversity Index',
-      style: {
-        fontSize: '16px',
-        fontWeight: '600',
-      },
-    },
-    xAxis: {
-      categories: analyticsData.biodiversity.map((d) => d.month),
-    },
-    yAxis: {
-      title: {
-        text: 'Species Count',
-      },
-    },
-    series: [
-      {
-        name: 'Species Observed',
-        data: analyticsData.biodiversity.map((d) => d.species),
-        fillColor: {
-          linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 },
-          stops: [
-            [0, '#3b82f6'],
-            [1, 'rgba(59, 130, 246, 0.1)'],
-          ],
-        },
-        color: '#3b82f6',
-      },
-    ],
-    credits: {
-      enabled: false,
-    },
-    legend: {
-      enabled: false,
-    },
-  }
-
-  // Carbon Sequestration Chart Configuration
-  const carbonOptions = {
-    chart: {
-      type: 'column',
-      height: 300,
-    },
-    title: {
-      text: 'Carbon Sequestration',
-      style: {
-        fontSize: '16px',
-        fontWeight: '600',
-      },
-    },
-    xAxis: {
-      categories: analyticsData.carbonSequestration.map((d) => d.month),
-    },
-    yAxis: {
-      title: {
-        text: 'Tons of CO₂',
-      },
-    },
-    series: [
-      {
-        name: 'CO₂ Captured',
-        data: analyticsData.carbonSequestration.map((d) => parseFloat(d.tons)),
-        color: '#8b5cf6',
-      },
-    ],
-    credits: {
-      enabled: false,
-    },
-    legend: {
-      enabled: false,
-    },
-  }
-
-  // Soil Health Chart Configuration
-  const soilHealthOptions = {
-    chart: {
-      type: 'spline',
-      height: 300,
-    },
-    title: {
-      text: 'Soil Health Quality Score',
-      style: {
-        fontSize: '16px',
-        fontWeight: '600',
-      },
-    },
-    xAxis: {
-      categories: analyticsData.soilHealth.map((d) => d.month),
-    },
-    yAxis: {
-      title: {
-        text: 'Quality Score (%)',
-      },
-      min: 0,
-      max: 100,
-    },
-    series: [
-      {
-        name: 'Soil Quality',
-        data: analyticsData.soilHealth.map((d) => parseFloat(d.quality)),
-        color: '#f59e0b',
-      },
-    ],
-    credits: {
-      enabled: false,
-    },
-    legend: {
-      enabled: false,
-    },
-  }
+    fetchAnalytics()
+  }, [site.id, site.analytics])
 
   // Prevent body scroll when modal is open
   useEffect(() => {
@@ -198,6 +46,69 @@ const SiteAnalytics = ({ site, onClose }) => {
     }
   }, [])
 
+  const historical = analyticsData?.historical_data || {}
+
+  // Chart configurations
+  const treeGrowthOptions = {
+    chart: { type: 'line', height: 300 },
+    title: { text: 'Tree Growth Over Time', style: { fontSize: '16px', fontWeight: '600' } },
+    xAxis: { categories: historical.months || [], title: { text: 'Month' } },
+    yAxis: { title: { text: 'Number of Trees' } },
+    series: [{ name: 'Trees Planted', data: historical.tree_count || [], color: '#10b981' }],
+    credits: { enabled: false },
+    legend: { enabled: false },
+  }
+
+  const biodiversityOptions = {
+    chart: { type: 'area', height: 300 },
+    title: { text: 'Biodiversity Index', style: { fontSize: '16px', fontWeight: '600' } },
+    xAxis: { categories: historical.months || [] },
+    yAxis: { title: { text: 'Species Count' } },
+    series: [{
+      name: 'Species Observed',
+      data: historical.biodiversity || [],
+      fillColor: { linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, stops: [[0, '#3b82f6'], [1, 'rgba(59, 130, 246, 0.1)']] },
+      color: '#3b82f6',
+    }],
+    credits: { enabled: false },
+    legend: { enabled: false },
+  }
+
+  const carbonOptions = {
+    chart: { type: 'column', height: 300 },
+    title: { text: 'Carbon Sequestration', style: { fontSize: '16px', fontWeight: '600' } },
+    xAxis: { categories: historical.months || [] },
+    yAxis: { title: { text: 'Tons of CO₂' } },
+    series: [{ name: 'CO₂ Captured', data: historical.co2_sequestration || [], color: '#8b5cf6' }],
+    credits: { enabled: false },
+    legend: { enabled: false },
+  }
+
+  const soilHealthOptions = {
+    chart: { type: 'spline', height: 300 },
+    title: { text: 'Soil Health Quality Score', style: { fontSize: '16px', fontWeight: '600' } },
+    xAxis: { categories: historical.months || [] },
+    yAxis: { title: { text: 'Quality Score (%)' }, min: 0, max: 100 },
+    series: [{ name: 'Soil Quality', data: historical.soil_health || [], color: '#f59e0b' }],
+    credits: { enabled: false },
+    legend: { enabled: false },
+  }
+
+  const canopyCoverOptions = {
+    chart: { type: 'area', height: 300 },
+    title: { text: 'Canopy Cover Progress', style: { fontSize: '16px', fontWeight: '600' } },
+    xAxis: { categories: historical.months || [] },
+    yAxis: { title: { text: 'Coverage (%)' }, min: 0, max: 100 },
+    series: [{
+      name: 'Canopy Cover',
+      data: historical.canopy_cover || [],
+      fillColor: { linearGradient: { x1: 0, y1: 0, x2: 0, y2: 1 }, stops: [[0, '#10b981'], [1, 'rgba(16, 185, 129, 0.1)']] },
+      color: '#10b981',
+    }],
+    credits: { enabled: false },
+    legend: { enabled: false },
+  }
+
   return (
     <div className="analytics-overlay" onClick={onClose}>
       <div className="analytics-modal" onClick={(e) => e.stopPropagation()}>
@@ -206,127 +117,125 @@ const SiteAnalytics = ({ site, onClose }) => {
             <h2>{site.name}</h2>
             <p className="site-description">{site.description || 'No description available'}</p>
             <div className="site-meta">
-              <span className="meta-item">
-                📍 Project ID: {site.project_id}
-              </span>
-              {site.area_hectares && (
-                <span className="meta-item">
-                  📏 Area: {site.area_hectares} hectares
-                </span>
-              )}
+              <span className="meta-item">📍 Project ID: {site.project_id}</span>
+              {site.area_hectares && <span className="meta-item">📏 Area: {site.area_hectares} hectares</span>}
             </div>
           </div>
-          <button className="close-btn" onClick={onClose}>
-            ✕
-          </button>
+          <button className="close-btn" onClick={onClose}>✕</button>
         </div>
 
-        <div className="analytics-tabs">
-          <button
-            className={activeTab === 'overview' ? 'tab active' : 'tab'}
-            onClick={() => setActiveTab('overview')}
-          >
-            Overview
-          </button>
-          <button
-            className={activeTab === 'detailed' ? 'tab active' : 'tab'}
-            onClick={() => setActiveTab('detailed')}
-          >
-            Detailed Metrics
-          </button>
-        </div>
-
-        <div className="analytics-content">
-          {activeTab === 'overview' && (
-            <div className="overview-grid">
-              <div className="stat-card">
-                <div className="stat-icon" style={{ background: '#dcfce7' }}>
-                  🌳
-                </div>
-                <div className="stat-content">
-                  <h3>Total Trees</h3>
-                  <p className="stat-value">
-                    {analyticsData.treeGrowth[analyticsData.treeGrowth.length - 1].count}
-                  </p>
-                  <p className="stat-change positive">+12% this month</p>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon" style={{ background: '#dbeafe' }}>
-                  🦋
-                </div>
-                <div className="stat-content">
-                  <h3>Species Count</h3>
-                  <p className="stat-value">
-                    {analyticsData.biodiversity[analyticsData.biodiversity.length - 1].species}
-                  </p>
-                  <p className="stat-change positive">+8% this month</p>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon" style={{ background: '#ede9fe' }}>
-                  🌱
-                </div>
-                <div className="stat-content">
-                  <h3>Carbon Captured</h3>
-                  <p className="stat-value">
-                    {analyticsData.carbonSequestration[
-                      analyticsData.carbonSequestration.length - 1
-                    ].tons}{' '}
-                    tons
-                  </p>
-                  <p className="stat-change positive">+15% this month</p>
-                </div>
-              </div>
-
-              <div className="stat-card">
-                <div className="stat-icon" style={{ background: '#fef3c7' }}>
-                  🌾
-                </div>
-                <div className="stat-content">
-                  <h3>Soil Quality</h3>
-                  <p className="stat-value">
-                    {analyticsData.soilHealth[analyticsData.soilHealth.length - 1].quality}%
-                  </p>
-                  <p className="stat-change positive">+3% this month</p>
-                </div>
-              </div>
-
-              <div className="chart-container full-width">
-                <HighchartsReact highcharts={Highcharts} options={treeGrowthOptions} />
-              </div>
-
-              <div className="chart-container full-width">
-                <HighchartsReact highcharts={Highcharts} options={biodiversityOptions} />
-              </div>
+        {loading ? (
+          <div className="loading-state">
+            <div className="loader"></div>
+            <p>Loading analytics data...</p>
+          </div>
+        ) : error ? (
+          <div className="error-state">
+            <p>⚠️ {error}</p>
+          </div>
+        ) : (
+          <>
+            <div className="analytics-tabs">
+              <button className={activeTab === 'overview' ? 'tab active' : 'tab'} onClick={() => setActiveTab('overview')}>
+                Overview
+              </button>
+              <button className={activeTab === 'detailed' ? 'tab active' : 'tab'} onClick={() => setActiveTab('detailed')}>
+                Detailed Metrics
+              </button>
             </div>
-          )}
 
-          {activeTab === 'detailed' && (
-            <div className="detailed-grid">
-              <div className="chart-container">
-                <HighchartsReact highcharts={Highcharts} options={carbonOptions} />
-              </div>
-              <div className="chart-container">
-                <HighchartsReact highcharts={Highcharts} options={soilHealthOptions} />
-              </div>
-              <div className="chart-container">
-                <HighchartsReact highcharts={Highcharts} options={treeGrowthOptions} />
-              </div>
-              <div className="chart-container">
-                <HighchartsReact highcharts={Highcharts} options={biodiversityOptions} />
-              </div>
+            <div className="analytics-content">
+              {activeTab === 'overview' && (
+                <div className="overview-grid">
+                  <div className="stat-card">
+                    <div className="stat-icon" style={{ background: '#dcfce7' }}>🌳</div>
+                    <div className="stat-content">
+                      <h3>Estimated Trees</h3>
+                      <p className="stat-value">{analyticsData.estimated_trees?.toLocaleString() || 0}</p>
+                      <p className="stat-info">Based on {analyticsData.area_hectares} hectares</p>
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon" style={{ background: '#ede9fe' }}>♻️</div>
+                    <div className="stat-content">
+                      <h3>CO₂ Sequestration</h3>
+                      <p className="stat-value">{analyticsData.co2_sequestration_annual} tons/year</p>
+                      <p className="stat-info">Offsets {analyticsData.co2_offset_vehicles} vehicles annually</p>
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon" style={{ background: '#dbeafe' }}>🦋</div>
+                    <div className="stat-content">
+                      <h3>Biodiversity Score</h3>
+                      <p className="stat-value">{analyticsData.biodiversity_score}</p>
+                      <p className="stat-info">Species diversity index</p>
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon" style={{ background: '#fef3c7' }}>🌾</div>
+                    <div className="stat-content">
+                      <h3>Soil Health</h3>
+                      <p className="stat-value">{analyticsData.soil_health_index}%</p>
+                      <p className="stat-info">Quality index</p>
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon" style={{ background: '#fef2f2' }}>🌱</div>
+                    <div className="stat-content">
+                      <h3>Biomass</h3>
+                      <p className="stat-value">{analyticsData.estimated_biomass_tons} tons</p>
+                      <p className="stat-info">Total estimated biomass</p>
+                    </div>
+                  </div>
+
+                  <div className="stat-card">
+                    <div className="stat-icon" style={{ background: '#dbeafe' }}>💧</div>
+                    <div className="stat-content">
+                      <h3>Canopy Cover</h3>
+                      <p className="stat-value">{analyticsData.canopy_cover_percentage}%</p>
+                      <p className="stat-info">Current coverage</p>
+                    </div>
+                  </div>
+
+                  <div className="chart-container full-width">
+                    <HighchartsReact highcharts={Highcharts} options={treeGrowthOptions} />
+                  </div>
+
+                  <div className="chart-container full-width">
+                    <HighchartsReact highcharts={Highcharts} options={carbonOptions} />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'detailed' && (
+                <div className="detailed-grid">
+                  <div className="chart-container">
+                    <HighchartsReact highcharts={Highcharts} options={canopyCoverOptions} />
+                  </div>
+                  <div className="chart-container">
+                    <HighchartsReact highcharts={Highcharts} options={soilHealthOptions} />
+                  </div>
+                  <div className="chart-container">
+                    <HighchartsReact highcharts={Highcharts} options={treeGrowthOptions} />
+                  </div>
+                  <div className="chart-container">
+                    <HighchartsReact highcharts={Highcharts} options={biodiversityOptions} />
+                  </div>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        <div className="analytics-footer">
-          <p className="disclaimer">
-            📊 Analytics data is for demonstration purposes. Real-time data integration coming soon.
-          </p>
-        </div>
+            <div className="analytics-footer">
+              <p className="disclaimer">
+                📊 Analytics calculated using FAO and IPCC research-based estimates for reforestation projects.
+              </p>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -334,10 +243,12 @@ const SiteAnalytics = ({ site, onClose }) => {
 
 SiteAnalytics.propTypes = {
   site: PropTypes.shape({
+    id: PropTypes.number.isRequired,
     name: PropTypes.string.isRequired,
     description: PropTypes.string,
     project_id: PropTypes.number.isRequired,
     area_hectares: PropTypes.number,
+    analytics: PropTypes.object,
   }).isRequired,
   onClose: PropTypes.func.isRequired,
 }

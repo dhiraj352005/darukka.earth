@@ -17,10 +17,11 @@ const api = axios.create({
   withCredentials: true, // Include credentials for CORS
 });
 
-// Request interceptor for adding auth tokens (if needed in future)
+// Request interceptor for adding auth tokens
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    // Use 'token' which is what AuthContext stores
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

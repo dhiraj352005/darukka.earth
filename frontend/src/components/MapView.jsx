@@ -18,6 +18,14 @@ const MapView = ({ onSiteClick, isAdmin }) => {
   const [loading, setLoading] = useState(false)
   const [webglSupported, setWebglSupported] = useState(true)
   const [webglError, setWebglError] = useState(null)
+  const [showSaveModal, setShowSaveModal] = useState(false)
+  const [saveFormData, setSaveFormData] = useState({
+    siteName: '',
+    description: '',
+    projectId: '',
+    createNewProject: false,
+    projectName: ''
+  })
 
   // Check WebGL support on mount
   useEffect(() => {
@@ -251,65 +259,76 @@ const MapView = ({ onSiteClick, isAdmin }) => {
       return
     }
 
-    const siteName = prompt('Enter a name for this site:')
-    if (!siteName) return
+    setShowSaveModal(true)
+  }
 
-    // Ask if user wants to create a new project or use existing
-    const createNewProject = confirm(
-      'Do you want to create a NEW project for this site?\n\n' +
-      'Click OK to create a new project\n' +
-      'Click Cancel to use an existing project'
-    )
+  const handleSaveFormSubmit = async (e) => {
+    e.preventDefault()
+    
+    if (!saveFormData.siteName) {
+      alert('Please enter a site name')
+      return
+    }
 
     setLoading(true)
     let projectId
 
     try {
-      if (createNewProject) {
-        // Create a new project
-        const projectName = prompt('Enter project name:', `Project for ${siteName}`)
-        if (!projectName) {
+      if (saveFormData.createNewProject) {
+        if (!saveFormData.projectName) {
+          alert('Please enter a project name')
           setLoading(false)
           return
         }
 
         const projectData = {
-          name: projectName,
-          description: `Project containing ${siteName}`,
+          name: saveFormData.projectName,
+          description: `Project containing ${saveFormData.siteName}`,
           status: 'active'
         }
 
         const projectResponse = await projectAPI.create(projectData)
         projectId = projectResponse.data.id
-        alert(`✓ New project created with ID: ${projectId}`)
       } else {
-        // Use existing project
-        const projectIdInput = prompt('Enter existing project ID:', '1')
-        if (!projectIdInput) {
-          setLoading(false)
-          return
-        }
-        
-        projectId = parseInt(projectIdInput)
+        projectId = parseInt(saveFormData.projectId)
         if (isNaN(projectId)) {
-          alert('Invalid project ID. Please enter a number.')
+          alert('Please enter a valid project ID or create a new project')
           setLoading(false)
           return
         }
       }
 
-      // Create the site
+      // Extract geometry from drawn feature
+      const geometry = drawnFeatures[0].geometry
+
+      // Create the site with proper authentication
       const siteData = {
-        name: siteName,
-        description: 'Site created from map',
+        name: saveFormData.siteName,
+        description: saveFormData.description || 'Site created from map interface',
         project_id: projectId,
-        geometry: drawnFeatures[0].geometry, // Take first drawn polygon
-        area_hectares: Math.floor(Math.random() * 100) + 10, // Placeholder calculation
+        geometry: geometry,
         location_info: 'Created via map interface',
       }
 
-      await siteAPI.create(siteData)
-      alert('✓ Site saved successfully!')
+      const response = await siteAPI.create(siteData)
+      
+      // Show success message with analytics
+      const siteInfo = response.data
+      const analytics = response.analytics || {}
+      
+      alert(
+        `✓ Site "${siteInfo.name}" created successfully!\n\n` +
+        `📍 Area: ${siteInfo.area_hectares || analytics.area_hectares || 0} hectares\n` +
+        `🌳 Estimated Trees: ${analytics.estimated_trees || 0}\n` +
+        `♻️ CO2 Sequestration: ${analytics.co2_sequestration_annual || 0} tons/year`
+      )
+
+      // Store site info with analytics for immediate display
+      const siteWithAnalytics = {
+        ...siteInfo,
+        analytics: analytics
+      }
+      console.log('Site created with analytics:', siteWithAnalytics)
 
       // Clear drawings
       if (draw.current) {
@@ -317,11 +336,36 @@ const MapView = ({ onSiteClick, isAdmin }) => {
         setDrawnFeatures([])
       }
 
+      // Reset form
+      setSaveFormData({
+        siteName: '',
+        description: '',
+        projectId: '',
+        createNewProject: false,
+        projectName: ''
+      })
+      setShowSaveModal(false)
+
       // Reload sites
-      loadSites()
+      await loadSites()
+      
+      // Trigger analytics modal
+      if (onSiteClick) {
+        setTimeout(() => {
+          onSiteClick({
+            id: siteInfo.id,
+            name: siteInfo.name,
+            description: siteInfo.description,
+            project_id: siteInfo.project_id,
+            area_hectares: siteInfo.area_hectares,
+            analytics: analytics
+          })
+        }, 500)
+      }
+
     } catch (error) {
       console.error('Error saving site:', error)
-      const errorMsg = error.response?.data?.detail || error.message
+      const errorMsg = error.response?.data?.detail || error.message || 'Failed to save site'
       alert('Failed to save: ' + errorMsg)
     } finally {
       setLoading(false)
@@ -411,6 +455,98 @@ const MapView = ({ onSiteClick, isAdmin }) => {
             <span>Total sites: {sites.length}</span>
           </div>
         </>
+      )}
+
+      {/* Save Site Modal */}
+      {showSaveModal && (
+        <div className="modal-overlay" onClick={() => setShowSaveModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>💾 Save Conservation Site</h2>
+              <button className="close-btn" onClick={() => setShowSaveModal(false)}>✕</button>
+            </div>
+            
+            <form onSubmit={handleSaveFormSubmit} className="save-form">
+              <div className="form-group">
+                <label htmlFor="siteName">Site Name *</label>
+                <input
+                  type="text"
+                  id="siteName"
+                  value={saveFormData.siteName}
+                  onChange={(e) => setSaveFormData({...saveFormData, siteName: e.target.value})}
+                  placeholder="Enter site name"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="description">Description</label>
+                <textarea
+                  id="description"
+                  value={saveFormData.description}
+                  onChange={(e) => setSaveFormData({...saveFormData, description: e.target.value})}
+                  placeholder="Enter site description (optional)"
+                  rows="3"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={saveFormData.createNewProject}
+                    onChange={(e) => setSaveFormData({...saveFormData, createNewProject: e.target.checked})}
+                  />
+                  Create new project for this site
+                </label>
+              </div>
+
+              {saveFormData.createNewProject ? (
+                <div className="form-group">
+                  <label htmlFor="projectName">New Project Name *</label>
+                  <input
+                    type="text"
+                    id="projectName"
+                    value={saveFormData.projectName}
+                    onChange={(e) => setSaveFormData({...saveFormData, projectName: e.target.value})}
+                    placeholder="Enter project name"
+                    required={saveFormData.createNewProject}
+                  />
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label htmlFor="projectId">Project ID *</label>
+                  <input
+                    type="number"
+                    id="projectId"
+                    value={saveFormData.projectId}
+                    onChange={(e) => setSaveFormData({...saveFormData, projectId: e.target.value})}
+                    placeholder="Enter existing project ID"
+                    required={!saveFormData.createNewProject}
+                  />
+                </div>
+              )}
+
+              <div className="form-actions">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveModal(false)}
+                  className="btn btn-secondary"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : '💾 Save Site'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )
