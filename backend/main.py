@@ -55,9 +55,19 @@ def register(user: UserRegister):
     
     # Check if user already exists
     if user.email in users_db:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        # Update existing user instead of throwing error
+        existing_user = users_db[user.email]
+        existing_user["password"] = user.password  # Update password
+        existing_user["name"] = user.name or user.email.split("@")[0]  # Update name
+        
+        return UserResponse(
+            id=existing_user["id"],
+            email=existing_user["email"],
+            name=existing_user["name"],
+            message="User updated successfully"
+        )
     
-    # Store user (in production, hash the password!)
+    # Store new user (in production, hash the password!)
     users_db[user.email] = {
         "id": user_id_counter,
         "email": user.email,
